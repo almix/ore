@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -58,31 +58,8 @@ class MainController extends ModuleUserController {
 			throw404();
 		}
 
-        // Был ли отправлен комментарий? обрабатываем
-		$comment = new Comment;
-		if (isset($_POST['Comment'])) {
-			$comment->attributes = $_POST['Comment'];
-
-			$comment->apartment_id = $id;
-
-			if(!Yii::app()->user->isGuest){
-				$comment->username = Yii::app()->user->username;
-				$comment->email = Yii::app()->user->email;
-			}
-
-            if ($comment->validate()) {
-                if ($comment->save(false)) {
-                    if ($comment->active == Comment::STATUS_PENDING){
-                        Yii::app()->user->setFlash(
-                            'newComment',
-                            Yii::t('module_comments','Thank you for your comment. Your comment will be posted once it is approved.')
-                        );
-                    }
-                }
-            }
-            else {
-                $comment->unsetAttributes(array('verifyCode'));
-            }
+		if (!in_array($apartment->type, Apartment::availableApTypesIds())) {
+			throw404();
 		}
 
 		// "Толстый" запрос из-за JOIN'ов. Кешируем его.
@@ -120,21 +97,12 @@ class MainController extends ModuleUserController {
 			$apartment->update(array('is_special_offer'));
 		}
 
-		if($apartment === null){
-			if($comment->apartment_id){
-				$comment->delete();
-			}
-			throw new CHttpException(404,'The requested page does not exist.');
-		}
 
-		// попытка комментария к несуществующему объявлению?
-		if($comment->apartment_id && $apartment->id != $comment->apartment_id){
-			$comment->delete();
+		if (!Yii::app()->request->isAjaxRequest) {
+			$ipAddress = Yii::app()->request->userHostAddress;
+			$userAgent = Yii::app()->request->userAgent;
+			Apartment::setApartmentVisitCount($apartment, $ipAddress, $userAgent);
 		}
-
-		$ipAddress = Yii::app()->request->userHostAddress;
-		$userAgent = Yii::app()->request->userAgent;
-		Apartment::setApartmentVisitCount($id, $ipAddress, $userAgent);
 
 		if ($printable) {
 			$this->layout='//layouts/print';
@@ -144,8 +112,7 @@ class MainController extends ModuleUserController {
 		} else {
 			$this->render('view', array(
 				'model' => $apartment,
-				'comment' => $comment,
-				'statistics' => Apartment::getApartmentVisitCount($id),
+				'statistics' => Apartment::getApartmentVisitCount($apartment),
 			));
 		}
 	}
@@ -154,7 +121,7 @@ class MainController extends ModuleUserController {
 		if($model === null){
 			$model = $this->loadModel($id);
 		}
-		$result = CustomGMap::actionGmap($id, $model, $this->renderPartial('backend/_marker', array('model' => $model), true));
+		$result = CustomGMap::actionGmap($id, $model, $this->renderPartial('backend/_marker', array('model' => $model), true), true);
 
 		if($result){
 			return $this->renderPartial('backend/_gmap', $result, true);
@@ -174,20 +141,37 @@ class MainController extends ModuleUserController {
 		return '';
 	}
 
-	public function actionGeneratePhone($id = null, $width=240, $font=5) {
+	public function actionOSmap($id, $model = null){
+		if($model === null){
+			$model = $this->loadModel($id);
+		}
+		$result = CustomOSMap::actionOSmap($id, $model, $this->renderPartial('backend/_marker', array('model' => $model), true));
+
+		if($result){
+			return $this->renderPartial('backend/_osmap', $result, true);
+		}
+		return '';
+	}
+
+	public function actionGeneratePhone($id = null, $width=130, $font=3) {
+
 		if ($id && param('useShowUserInfo')) {
-			$apartmentInfo = Apartment::model()->findByPk($id, array('select' => 'owner_id'));
+			$apartmentInfo = Apartment::model()->findByPk($id, array('select' => 'owner_id, phone'));
 
-			if ($apartmentInfo->owner_id)
-				$userInfo = User::model()->findByPk($apartmentInfo->owner_id, array('select' => 'phone'));
+            $phone = $apartmentInfo->phone;
 
-			if ($userInfo->phone) {
+			if (!$phone && $apartmentInfo->owner_id){
+                $userInfo = User::model()->findByPk($apartmentInfo->owner_id, array('select' => 'phone'));
+                $phone = $userInfo->phone;
+            }
+
+			if ($phone) {
 				$image = imagecreate($width, 20);
 
 				$bg = imagecolorallocate($image, 255, 255, 255);
 				$textcolor = imagecolorallocate($image, 37, 75, 137);
 
-				imagestring($image, $font, 0, 0, $userInfo->phone, $textcolor);
+				imagestring($image, $font, 0, 0, $phone, $textcolor);
 
 				header('Pragma: public');
 				header('Expires: 0');
@@ -211,16 +195,25 @@ class MainController extends ModuleUserController {
 			if (param('useUserads'))
 				$criteria->addCondition('owner_active = '.Apartment::STATUS_ACTIVE);
 
-			$criteria->addCondition('owner_id = "'.$userId.'"');
-			$criteria->order = 't.id ASC';
+			//$criteria->order = 't.id ASC';
 
 			$userModel = User::model()->findByPk($userId);
-			$userName = $userModel->username;
+			$userName = $userModel->getNameForType();
+
+            if($userModel->type == User::TYPE_AGENCY){
+                $userName = $userModel->getTypeName() . ' "' . $userName .'"';
+                $sql = "SELECT id FROM {{users}} WHERE agency_user_id = :user_id AND agent_status=:status";
+                $agentsId = Yii::app()->db->createCommand($sql)->queryColumn(array(':user_id' => $userId, ':status' => User::AGENT_STATUS_CONFIRMED));
+                $agentsId[] = $userId;
+                $criteria->compare('owner_id', $agentsId, false);
+            } else {
+                $criteria->compare('owner_id', $userId);
+            }
 
 			// find count
 			$apCount = Apartment::model()->count($criteria);
 
-			if(isset($_POST['is_ajax'])){
+			if(isset($_GET['is_ajax'])){
 				$this->renderPartial('_user_listings', array(
 					'criteria' => $criteria,
 					'apCount' => $apCount,
@@ -264,7 +257,7 @@ class MainController extends ModuleUserController {
 
 			if($model->validate()){
 				$notifier = new Notifier;
-				$notifier->raiseEvent('onRequestProperty', $model, 0, $model->ownerEmail);
+				$notifier->raiseEvent('onRequestProperty', $model, array('forceEmail' => $model->ownerEmail));
 
 				Yii::app()->user->setFlash('success', tt('Thanks_for_request', 'apartments'));
 				$model = new SendMailForm; // clear fields
@@ -296,7 +289,7 @@ class MainController extends ModuleUserController {
 	}
 
 	public function actionSavecoords($id){
-		if(param('useGoogleMap', 1) || param('useYandexMap', 1)){
+		if(param('useGoogleMap', 1) || param('useYandexMap', 1) || param('useOSMMap', 1)){
 			$apartment = $this->loadModel($id);
 			if(isset($_POST['lat']) && isset($_POST['lng'])){
 				$apartment->lat = $_POST['lat'];

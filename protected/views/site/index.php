@@ -1,24 +1,40 @@
+<?php if (isset($newsIndex) && $newsIndex) : ?>
+	<div class="clear"></div>
+	<div class="last-news-index">
+		<p class="title"><?php echo tt('News', 'news');?></p>
+		<?php foreach($newsIndex as $news) : ?>
+			<div class="last-news-item">
+				<div class="last-news-date">
+					<p class="ns-label">
+						<?php echo $news->dateCreatedLong;?>
+					</p>
+				</div>
+				<div class="last-news-title">
+					<?php echo CHtml::link(truncateText($news->getStrByLang('title'), 8), $news->getUrl());?>
+				</div>
+			</div>
+		<?php endforeach;?>
+	</div>
+	<div class="clear"></div>
+<?php endif;?>
+
 <?php
-
-
 if($page){
-	if($page->page_title){
-		echo '<h1>'.$page->page_title.'</h1>';
-	}
+	if (isset($page->page)) {
 
-	if($page->page_body){
-		echo $page->page_body;
-	}
-
-	if ($page->widget){
-		echo '<div class="clear"></div><div>';
-		Yii::import('application.modules.'.$page->widget.'.components.*');
-		if($page->widget == 'contactform'){
-			$this->widget('ContactformWidget', array('page' => 'index'));
-		} else {
-			$this->widget(ucfirst($page->widget).'Widget');
+		if($page->page->body){
+			echo $page->page->body;
 		}
-		echo '</div>';
+
+		if ($page->page->widget){
+			echo '<div class="clear"></div><div>';
+			Yii::import('application.modules.'.$page->page->widget.'.components.*');
+			if($page->page->widget == 'contactform'){
+				$this->widget('ContactformWidget', array('page' => 'index'));
+			} else {
+				$this->widget(ucfirst($page->page->widget).'Widget');
+			}
+			echo '</div>';
+		}
 	}
 }
-

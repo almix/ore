@@ -2,8 +2,8 @@
 /**********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- *    version                :    1.5.1
- *    copyright            :    (c) 2013 Monoray
+ *    version                :    1.8.2
+ *    copyright            :    (c) 2014 Monoray
  *    website                :    http://www.monoray.ru/
  *    contact us            :    http://www.monoray.ru/contact
  *
@@ -45,7 +45,6 @@ class DbMessageSource extends CMessageSource {
 				return unserialize($data);
 			}
 		}
-		//logs('from-db - '.$category.', '.$language);
 
 		$messages = $this->loadMessagesFromDb($category, $language);
 

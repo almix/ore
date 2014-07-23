@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -17,9 +17,10 @@
 ***********************************************************************************************/
 
 class MainController extends ModuleUserController{
+    public $layout='//layouts/usercpanel';
+
 	public $modelName = 'UserAds';
 	public $photoUpload = false;
-
 
 	public function init() {
 		// если админ - делаем редирект на просмотр в админку
@@ -55,9 +56,15 @@ class MainController extends ModuleUserController{
 			$model->attributes = $_GET[$this->modelName];
 		}
 
-		$this->render('index',array(
-			'model'=>$model,
-		));
+        if(Yii::app()->request->isAjaxRequest){
+            $this->renderPartial('index',array(
+                'model'=>$model,
+            ), false, true);
+        } else {
+            $this->render('index',array(
+                'model'=>$model,
+            ));
+        }
 	}
 
 	public function actionActivate(){
@@ -79,11 +86,24 @@ class MainController extends ModuleUserController{
 
 
 	public function actionCreate(){
-		$this->modelName = 'Apartment';
+        $this->setActiveMenu('add_ad');
+
+        $this->modelName = 'Apartment';
 		$model = new $this->modelName;
 
+		$user = User::model()->findByPk(Yii::app()->user->id);
+		if (preg_match("/null\.io/i", $user->email)) {
+			Yii::app()->user->setFlash('error', tt('You can not add listings till you specify your valid email.', 'socialauth'));
+			$this->redirect(array('/usercpanel/main/index', 'from' => 'userads'));
+		}
+		elseif (!$user->phone) {
+			Yii::app()->user->setFlash('error', tt('You can not add listings till you specify your phone number.', 'socialauth'));
+			$this->redirect(array('/usercpanel/main/index', 'from' => 'userads'));
+		}
+
+
 		$model->active = Apartment::STATUS_DRAFT;
-		$model->type = Apartment::TYPE_RENT;
+        $model->setDefaultType();
 		$model->save(false);
 
 		$this->redirect(array('update', 'id' => $model->id));
@@ -98,7 +118,9 @@ class MainController extends ModuleUserController{
 	}
 
 	public function actionUpdate($id){
-		$model = $this->loadModelUserAd($id);
+        $this->setActiveMenu('my_listings');
+
+        $model = $this->loadModelUserAd($id);
 		if(issetModule('bookingcalendar')) {
 			$model = $model->with(array('bookingCalendar'));
 		}
@@ -116,7 +138,7 @@ class MainController extends ModuleUserController{
 
 			if ($model->type != Apartment::TYPE_BUY && $model->type != Apartment::TYPE_RENTING) {
 				// video
-				$firstValidate = true;
+				$videoFileValidate = true;
 				if((isset($_FILES[$this->modelName]['name']['video_file']) && $_FILES[$this->modelName]['name']['video_file'])){
 					$model->scenario = 'video_file';
 					if ($model->validate()) {
@@ -137,23 +159,35 @@ class MainController extends ModuleUserController{
 						}
 					}
 					else {
-						$firstValidate = false;
-					}
-				}
-				// html code
-				if (isset($_POST[$this->modelName]['video_html']) && $_POST[$this->modelName]['video_html']) {
-					$model->video_html = $_POST[$this->modelName]['video_html'];
-					$model->scenario = 'video_html';
-					if ($model->validate()) {
-						$sql = 'INSERT INTO {{apartment_video}} (apartment_id, video_file, 	video_html, date_updated)
-							VALUES ("'.$id.'", "", "'.CHtml::encode($model->video_html).'", NOW())';
-						Yii::app()->db->createCommand($sql)->execute();
-					}
-					else {
-						$firstValidate = false;
+						$videoFileValidate = false;
 					}
 				}
 
+				if ($videoFileValidate) {
+					// html code
+					$videoHtmlValidate = true;
+					if (isset($_POST[$this->modelName]['video_html']) && $_POST[$this->modelName]['video_html']) {
+						$model->video_html = $_POST[$this->modelName]['video_html'];
+						$model->scenario = 'video_html';
+						if ($model->validate()) {
+							$sql = 'INSERT INTO {{apartment_video}} (apartment_id, video_file, 	video_html, date_updated)
+								VALUES ("'.$id.'", "", "'.CHtml::encode($model->video_html).'", NOW())';
+							Yii::app()->db->createCommand($sql)->execute();
+						}
+						else {
+							$videoHtmlValidate = false;
+						}
+					}
+				}
+
+				if ($videoFileValidate && $videoHtmlValidate) {
+					$panoramaValidate = true;
+					$model->panoramaFile = CUploadedFile::getInstance($model, 'panoramaFile');
+					$model->scenario = 'panorama';
+					if(!$model->validate()){
+						$panoramaValidate = false;
+					}
+				}
 
 				$city = "";
 				if (issetModule('location') && param('useLocation', 1)) {
@@ -162,9 +196,10 @@ class MainController extends ModuleUserController{
 					$city .= $model->locCity ? $model->locCity->getStrByLang('name') : "";
 				} else
 					$city = $model->city ? $model->city->getStrByLang('name') : "";
+
 				// data
-				if ($firstValidate) {
-					if(($model->address && $city) && (param('useGoogleMap', 1) || param('useYandexMap', 1))){
+				if ($videoFileValidate && $videoHtmlValidate && $panoramaValidate) {
+					if(($model->address && $city) && (param('useGoogleMap', 1) || param('useYandexMap', 1) || param('useOSMMap', 1))){
 						if (!$model->lat && !$model->lng) { # уже есть
 
 							$coords = Geocoding::getCoordsByAddress($model->address, $city);
@@ -182,11 +217,12 @@ class MainController extends ModuleUserController{
 
 			$model->owner_active = Apartment::STATUS_ACTIVE;
 
-            $isUpdate = Yii::app()->request->getPost('is_update');
+			$isUpdate = Yii::app()->request->getPost('is_update');
 
-            if($isUpdate){
-                $model->save(false);
-            }elseif($model->validate()){
+			if($isUpdate){
+				$model->save(false);
+			}
+			elseif($model->validate()) {
 				if(param('useUseradsModeration', 1)){
 					$model->active = Apartment::STATUS_MODERATION;
 				} else {
@@ -196,16 +232,18 @@ class MainController extends ModuleUserController{
 				if($model->save(false)){
 					$this->redirect(array('/apartments/main/view','id'=>$model->id));
 				}
-			} else {
+			}
+			else {
 				$model->active = $originalActive;
 			}
 		}
+
+        $model->getCategoriesForUpdate();
 
 		if($model->active == Apartment::STATUS_DRAFT){
 			Yii::app()->user->setState('menu_active', 'apartments.create');
 			$this->render('create', array(
 				'model' => $model,
-				'categories' => Apartment::getCategories($id, $model->type),
 				'supportvideoext' => ApartmentVideo::model()->supportExt,
 				'supportvideomaxsize' => ApartmentVideo::model()->fileMaxSize,
 			));
@@ -215,7 +253,6 @@ class MainController extends ModuleUserController{
 		$this->render('update',
 			array(
 				'model'=>$model,
-				'categories' => Apartment::getCategories($id, $model->type),
 				'supportvideoext' => ApartmentVideo::model()->supportExt,
 				'supportvideomaxsize' => ApartmentVideo::model()->fileMaxSize,
 			)
@@ -261,13 +298,22 @@ class MainController extends ModuleUserController{
 		}
 	}
 
+	public function actionOSmap($id){
+		$model = $this->loadModelUserAd($id);
+
+		$result = CustomOSMap::actionOsmap($id, $model, $this->renderPartial('//../modules/apartments/views/backend/_marker', array('model' => $model), true));
+		if($result){
+			return $this->renderPartial('//../modules/apartments/views/backend/_osmap', $result, true);
+		}
+	}
+
 	public function actionSavecoords($id){
-		if(param('useGoogleMap', 1) || param('useYandexMap', 1)){
+		if(param('useGoogleMap', 1) || param('useYandexMap', 1) || param('useOSMMap', 1)){
 			$apartment = $this->loadModelUserAd($id);
 			if(isset($_POST['lat']) && isset($_POST['lng'])){
-				$apartment->lat = $_POST['lat'];
-				$apartment->lng = $_POST['lng'];
-				$apartment->save();
+				$apartment->lat = floatval($_POST['lat']);
+				$apartment->lng = floatval($_POST['lng']);
+				$apartment->update(array('lat', 'lng'));
 			}
 			Yii::app()->end();
 		}

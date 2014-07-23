@@ -6,7 +6,6 @@ EOAuth, /protected/extensions/eoauth, MIT, http://www.opensource.org/licenses/mi
 LightOpenID, /protected/extensions/lightopeni, MIT, http://www.opensource.org/licenses/mit-license.php
 EMailer, /protected/extensions/mailer/EMailer.php, LGPL, http://www.gnu.org/licenses/lgpl.html
 Phpmailer, /protected/extensions/mailer/phpmailer, LGPL,  http://www.gnu.org/licenses/lgpl.html
-EClientScript, /protected/extensions/minify/EClientScript.php, BSD, http://opensource.org/licenses/bsd-license.php
 CssMin, /protected/extensions/minify/CssMin.php, MIT, http://www.opensource.org/licenses/mit-license.php
 JSMinPlus, /protected/extensions/minify/JSMinPlus.php, LGPL, http://www.gnu.org/licenses/lgpl.html
 PHPQRCode, /protected/extensions/qrcode, LGPL, http://www.gnu.org/licenses/lgpl.html
@@ -20,6 +19,8 @@ GoogleTranslater, /protected/components/GoogleTranslater.php, MIT, http://www.op
 CImageHandler, /protected/modules/images/components/CImageHandler.php, MIT, http://www.opensource.org/licenses/mit-license.php
 EAjaxUpload, /protected/extensions/EAjaxUpload, BSD, http://www.opensource.org/licenses/bsd-license.php
 PrettyPhoto, /protected/modules/images/assets/prettyphoto, Creative Commons 2.5, http://creativecommons.org/licenses/by/2.5/
+jQuery SWFObject Plugin, /js/jquery.swfobject.1-1-1.min.js, MIT, http://jquery.thewikies.com/swfobject/license
+panorama360, /js/jquery.panorama360.js, MIT, http://www.opensource.org/licenses/mit-license.php
 Yii framework, /framework, BSD, http://www.yiiframework.com/license/
 
 

@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -43,6 +43,10 @@ class Booking extends CFormModel {
 	public $activatekey;
 	public $activateLink;
 
+	public $verifyCode;
+
+    public $type;
+
 	public static function getYiiDateFormat() {
 		$return = 'MM/dd/yyyy';
 		if (Yii::app()->language == 'ru') {
@@ -55,14 +59,18 @@ class Booking extends CFormModel {
 		return array(
 			array('date_start, date_end, time_in, time_out, ' . (Yii::app()->user->isGuest ? 'useremail, phone, username' : ''), 'required', 'on' => 'bookingform'),
 			array('status, time_in, time_out', 'numerical', 'integerOnly' => true),
-			array('useremail, username, comment', 'safe'),
+			array('useremail, username, comment, phone','filter','filter'=>array(new CHtmlPurifier(),'purify')),
 			array('useremail', 'email'),
 			array('date_start, date_end', 'date', 'format' => self::getYiiDateFormat(), 'on' => 'bookingform'),
 			array('date_start, date_end', 'myDateValidator', 'on' => 'bookingform'),
 			array('useremail', 'myUserEmailValidator', 'on' => 'bookingform'),
 			array('useremail, username', 'length', 'max' => 128),
+			array('comment', 'length', 'max' => 1024),
 			array('phone', 'required'),
 			array('date_start, date_end, date_created, status, useremailSearch, apartment_id, id', 'safe', 'on' => 'search'),
+
+			array('verifyCode', (Yii::app()->user->isGuest) ? 'required' : 'safe'),
+			array('verifyCode', 'captcha', 'allowEmpty'=> !(Yii::app()->user->isGuest)),
 		);
 	}
 
@@ -120,6 +128,7 @@ class Booking extends CFormModel {
 			'apartment_id' => tt('Apartment ID', 'booking'),
 			'id' => tt('ID', 'apartments'),
 			'phone' => Yii::t('common', 'Your phone number'),
+			'verifyCode' => tc('Verify Code'),
 		);
 	}
 
@@ -135,7 +144,7 @@ class Booking extends CFormModel {
 
 	public static function getJsDateFormat() {
 		$dateFormat = 'dd.mm.yy';
-		if (Yii::app()->language == 'en') {
+		if (Yii::app()->language != 'ru') {
 			$dateFormat = 'mm/dd/yy';
 		}
 		return $dateFormat;

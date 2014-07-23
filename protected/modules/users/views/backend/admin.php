@@ -29,6 +29,11 @@ $columns = array(
 		),
 		'filter' => array(0 => tt('Inactive'), 1 => tt('Active')),
 	),
+    array(
+        'name' => 'type',
+        'value' => '$data->getTypeName()',
+        'filter' => User::getTypeList(),
+    ),
 	array(
 		'name' => 'username',
 		'header' => tt('User name'),

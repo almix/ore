@@ -1,86 +1,71 @@
 <?php
 $modeListShow = User::getModeListShow();
 
-Yii::app()->clientScript->registerScript('ajaxSetStatus', "
-	var updateText = '" . Yii::t('common', 'Loading ...') . "';
-	var resultBlock = 'appartment_box';
-	var indicator = '" . Yii::app()->request->baseUrl . "/images/pages/indicator.gif';
-	var bg_img = '" . Yii::app()->request->baseUrl . "/images/pages/opacity.png';
+$route = Controller::getCurrentRoute();
 
-	var useGoogleMap = ".param('useGoogleMap', 0).";
-	var useYandexMap = ".param('useYandexMap', 0).";
+$urlsSwitching = array(
+    'block' => Yii::app()->createUrl($route, array('ls'=>'block') + $_GET, '&'),
+    'table' => Yii::app()->createUrl($route, array('ls'=>'table') + $_GET, '&'),
+    'map' => Yii::app()->createUrl($route, array('ls'=>'map') + $_GET, '&'),
+);
 
-	var list = {
-		lat: 0,
-		lng: 0,
+if (!param('useGoogleMap', 0) && !param('useYandexMap', 0) && !param('useOSMMap', 0))
+    unset($urlsSwitching['map']);
 
-		apply: function(){}
-	}
+Yii::app()->clientScript->registerScript('search-vars', "
+	var urlsSwitching = ".CJavaScript::encode($urlsSwitching).";
 ",
-CClientScript::POS_END);
+	CClientScript::POS_HEAD);
 
-if ($modeListShow == 'map') {
-	Yii::app()->clientScript->registerScript('apartmentPlacemarksOnMap', "
-		var placemarksYmap = [];
+if(!Yii::app()->request->isAjaxRequest){
+	Yii::app()->clientScript->registerScript('search-params', "
+        var updateText = '" . Yii::t('common', 'Loading ...') . "';
+        var resultBlock = 'appartment_box';
+        var indicator = '" . Yii::app()->request->baseUrl . "/images/pages/indicator.gif';
+        var bg_img = '" . Yii::app()->request->baseUrl . "/images/pages/opacity.png';
 
-		var list = {
-			lat: 0,
-			lng: 0,
+        var useGoogleMap = ".param('useGoogleMap', 0).";
+        var useYandexMap = ".param('useYandexMap', 0).";
+        var useOSMap = ".param('useOSMMap', 0).";
 
-			apply: function(){
-				$('div.appartment_item').each(function(){
-					var item = $(this);
+        var modeListShow = ".CJavaScript::encode($modeListShow).";
 
-					item.mouseover(function(){
+        $('div.appartment_item').live('mouseover mouseout', function(event){
+            if (event.type == 'mouseover') {
+             $(this).find('div.apartment_item_edit').show();
+            } else {
+             $(this).find('div.apartment_item_edit').hide();
+            }
+        });
 
-						var ad = $(this);
-						var lat = ad.attr('lat') + 0;
-						var lng = ad.attr('lng') + 0;
-						var id = ad.attr('ap_id');
+        function setListShow(mode){
+            modeListShow = mode;
+            reloadApartmentList(urlsSwitching[mode]);
+        };
 
-						if((list.lat != lat || list.lng != lng) && lat > 0 && lng > 0 ){
-							list.lat = lat;
-							list.lng = lng;
 
-							if(useGoogleMap){
-								if(typeof infoWindowsGMap !== 'undefined' && typeof infoWindowsGMap[id] !== 'undefined'){
-									for(var key in infoWindowsGMap){
-										if(key == id){
-											infoWindowsGMap[key].open();
-										}else{
-											infoWindowsGMap[key].close();
-										}
-									}
-									var latLng = new google.maps.LatLng(lat, lng);
-
-									mapGMap.panTo(latLng);
-									infoWindowsGMap[id].open(mapGMap, markersGMap[id]);
-								}
-							}
-
-							if(useYandexMap){
-								if(typeof placemarksYMap[id] !== 'undefined'){
-									placemarksYMap[id].balloon.open();
-								}
-							}
-						}
-					});
-				});
-			}
-		}
-
-		$(function(){
-			if(useGoogleMap){
-				if(typeof list !== 'undefined'){
-					list.apply();
-				}
-			}
-		});
-
-		",
-		CClientScript::POS_END);
-	}
+        $(function () {
+            if(modeListShow == 'map'){
+                list.apply();
+            }
+        });
+    ",
+		CClientScript::POS_HEAD, array(), true);
+}
 ?>
+
+<?php if (Yii::app()->request->isAjaxRequest && $route != 'site/index') : ?>
+	<?php if(isset($this->breadcrumbs) && $this->breadcrumbs):?>
+		<div class="clear"></div>
+		<?php
+		$this->widget('zii.widgets.CBreadcrumbs', array(
+			'links'=>$this->breadcrumbs,
+			'separator' => ' &#8594; ',
+		));
+		?>
+		<div class="clear"></div>
+	<?php endif?>
+<?php endif?>
 
 <div class="title_list">
     <h2>
@@ -88,28 +73,10 @@ if ($modeListShow == 'map') {
 		if ($this->widgetTitle !== null) {
 			echo $this->widgetTitle . (isset($count) && $count ? ' (' . $count . ')' : '');
 		} else {
-			echo Yii::t('module_apartments', 'Apartments list') . (isset($count) && $count ? ' (' . $count . ')' : '');
+			echo tt('Apartments list', 'apartments') . (isset($count) && $count ? ' (' . $count . ')' : '');
 		}
 		?>
     </h2>
-
-	<?php
-	$route = Controller::getCurrentRoute();
-
-	$urlsSwitching = array(
-		'block' => Yii::app()->createUrl($route, array('ls'=>'block') + $_GET, '&'),
-		'table' => Yii::app()->createUrl($route, array('ls'=>'table') + $_GET, '&'),
-		'map' => Yii::app()->createUrl($route, array('ls'=>'map') + $_GET, '&'),
-	);
-
-	Yii::app()->clientScript->registerScript('setListShow', "
-			function setListShow(mode){
-				var urlsSwitching = ".CJavaScript::encode($urlsSwitching).";
-				reloadApartmentList(urlsSwitching[mode]);
-			};
-		",
-		CClientScript::POS_END);
-	?>
 
 	<div class="change_list_show">
 		<a href="<?php echo $urlsSwitching['block']; ?>" <?php if ($modeListShow == 'block') {
@@ -126,23 +93,25 @@ if ($modeListShow == 'map') {
 			<img src="<?php echo Yii::app()->getBaseUrl(); ?>/images/pages/table.png">
 		</a>
 
-		<a href="<?php echo $urlsSwitching['map']; ?>" <?php if ($modeListShow == 'map') {
-			echo 'class="active_ls"';
-		} ?>
-		   onclick="setListShow('map'); return false;">
-			<img src="<?php echo Yii::app()->getBaseUrl(); ?>/images/pages/map.png">
-		</a>
+		<?php if (array_key_exists('map', $urlsSwitching)) : ?>
+			<a href="<?php echo $urlsSwitching['map']; ?>" <?php if ($modeListShow == 'map') {
+				echo 'class="active_ls"';
+			} ?>
+			   onclick="setListShow('map'); return false;">
+				<img src="<?php echo Yii::app()->getBaseUrl(); ?>/images/pages/map.png">
+			</a>
+		<?php endif; ?>
 	</div>
 </div>
 
 <div class="clear"></div>
 
 <?php
-if ($modeListShow != 'map' && $sorterLinks) {
-	foreach ($sorterLinks as $link) {
-		echo '<div class="sorting">' . $link . '</div>';
+	if ($modeListShow != 'map' && $sorterLinks) {
+		foreach ($sorterLinks as $link) {
+			echo '<div class="sorting">' . $link . '</div>';
+		}
 	}
-}
 ?>
 
 <div class="appartment_box" id="appartment_box">
@@ -153,24 +122,69 @@ if ($modeListShow != 'map' && $sorterLinks) {
 
 			$this->render('widgetApartments_list_item', array('criteria' => $criteria));
 
-		} elseif ($modeListShow == 'map') {
+		} elseif ($modeListShow == 'map' && (param('useGoogleMap', 0) || param('useYandexMap', 0) || param('useOSMMap', 0))) {
 
 			$this->render('widgetApartments_list_map', array('criteria' => $criteria));
 
 			//$this->widget('application.modules.viewallonmap.components.ViewallonmapWidget', array('criteria' => $criteria, 'filterOn' => false));
 
 		} else {
+//			if (isset($_GET['is_ajax'])) {
+//				Yii::app()->clientScript->registerCoreScript('jquery');
+//				Yii::app()->clientScript->registerCoreScript('jquery.ui');
+//				Yii::app()->clientScript->registerCoreScript('rating');
+//				Yii::app()->clientScript->registerCssFile(Yii::app()->clientScript->getCoreScriptUrl().'/rating/jquery.rating.css');
+//				Yii::app()->clientScript->registerCssFile(Yii::app()->baseUrl . '/css/ui/jquery-ui.multiselect.css');
+//				Yii::app()->clientScript->registerCssFile(Yii::app()->baseUrl . '/css/redmond/jquery-ui-1.7.1.custom.css');
+//				Yii::app()->clientScript->registerCssFile(Yii::app()->baseUrl . '/css/ui.slider.extras.css');
+//				Yii::app()->clientScript->registerScriptFile(Yii::app()->baseUrl . '/js/jquery.multiselect.min.js');
+//				Yii::app()->clientScript->registerCssFile(Yii::app()->baseUrl . '/css/ui/jquery-ui.multiselect.css');
+//				Yii::app()->clientScript->registerScriptFile(Yii::app()->baseUrl . '/js/jquery.dropdownPlain.js', CClientScript::POS_HEAD);
+//				Yii::app()->clientScript->registerScriptFile(Yii::app()->baseUrl . '/js/common.js', CClientScript::POS_HEAD);
+//				Yii::app()->clientScript->registerScriptFile(Yii::app()->baseUrl . '/js/habra_alert.js', CClientScript::POS_END);
+//				Yii::app()->clientScript->registerCssFile(Yii::app()->baseUrl.'/css/form.css', 'screen, projection');
+//			}
+
+			$dataProvider = new CActiveDataProvider('Apartment', array(
+				'criteria'=>$criteria,
+				'pagination'=>false,
+			));
+
+			$canShowAddress = isset($dataProvider->data[0]) ? $dataProvider->data[0]->canShowInView("address") : false;
 
 			$this->widget('zii.widgets.grid.CGridView', array(
-					'dataProvider' => new CActiveDataProvider('Apartment', array(
-						'criteria'=>$criteria,
-						'pagination'=>false,
-					)),
+					'id' => 'ap-view-table-list',
+					'dataProvider' => $dataProvider,
 					'rowCssClassExpression' => '$data->getRowCssClass()',
 					'enablePagination'=>false,
-					'afterAjaxUpdate' => "function() {
-						jQuery('#News_date_created').datepicker(jQuery.extend(jQuery.datepicker.regional['ru'],{'showAnim':'fold','dateFormat':'yy-mm-dd','changeMonth':'true','showButtonPanel':'true','changeYear':'true'}));
-					}",
+					'selectionChanged'=>'js:function(id) {
+						$currentGrid = $("#"+id);
+						$rows = $currentGrid.find(".items").children("tbody").children();
+						$selKey = $.fn.yiiGridView.getSelection(id);
+
+						if ($selKey.length > 0) {
+							$.each($currentGrid.find(".keys").children("span"), function(i,el){
+								if ($(this).text() == $selKey) {
+									$(this).attr("data-rel", "selected");
+								}
+								else {
+									$(this).removeAttr("data-rel");
+								}
+							});
+						}
+
+						$.each($currentGrid.find(".keys").children("span"), function(i,el){
+							var attr = $(this).attr("data-rel");
+							if (typeof attr !== "undefined" && attr !== false) {
+								$currentGrid.find(".items").children("tbody").children("tr").eq(i).addClass("selected");
+							}
+							else {
+								$currentGrid.find(".items").children("tbody").children("tr").eq(i).removeClass("selected");
+							}
+						});
+
+						return false;
+					}',
 					'template' => '{items}{pager}',
 					'columns' => array(
 						/*array(
@@ -182,6 +196,11 @@ if ($modeListShow != 'map' && $sorterLinks) {
 							'type' => 'raw'
 						),*/
 						array(
+							'header' => '',
+							'type' => 'raw',
+							'value' => 'Apartment::returnMainThumbForGrid($data)'
+						),
+						array(
 							'header' => tt('Type', 'apartments'),
 							'value' => 'Apartment::getNameByType($data->type)'
 						),
@@ -192,7 +211,8 @@ if ($modeListShow != 'map' && $sorterLinks) {
 						),
 						array(
 							'header' => tt('Address', 'apartments'),
-							'value' => '$data->getStrByLang("address")'
+							'value' => '$data->getStrByLang("address")',
+                            'visible' => $canShowAddress,
 						),
 						array(
 							'header' => tt('Object type', 'apartments'),
@@ -202,7 +222,7 @@ if ($modeListShow != 'map' && $sorterLinks) {
 						array(
 							'header' => tt('Square', 'apartments'),
 							'type' => 'raw',
-							'value' => '$data->square." ".tc("site_square")',
+							'value' => '$data->getSquareString()',
 							//'value' => 'Yii::t("module_apartments", "total square: {n}", $data->square)'
 						),
 						array(

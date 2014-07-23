@@ -4,18 +4,26 @@ foreach ($news as $item) : ?>
         <p>
             <span class="date"><?php echo $item->dateCreated; ?></span>
         </p>
+
+		<?php if($item->image):?>
+			<?php $src = $item->image->getSmallThumbLink(); ?>
+			<?php if($src) : ?>
+				<div class="news-image-list">
+					<?php echo CHtml::link(CHtml::image($src, $item->getStrByLang('title')), $item->image->fullHref(), array('class' => 'fancy')); ?>
+				</div>
+			<?php endif; ?>
+		<?php endif; ?>
+
 		<p>
 			<span class="title"><?php echo CHtml::link(CHtml::encode($item->getStrByLang('title')), $item->getUrl()); ?></span>
 		</p>
-        <p class="desc">
-            <?php echo truncateText(
-            $item->body,
-            param('newsModule_truncateAfterWords', 50)
-        ); ?>
-        </p>
+		<?php
+			echo $item->getAnnounce();
+		?>
         <p>
             <?php echo CHtml::link(tt('Read more &raquo;', 'news'), $item->getUrl()); ?>
         </p>
+        <div class="clear"></div>
     </div>
 <?php endforeach; ?>
 

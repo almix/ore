@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -21,6 +21,10 @@ class MainController extends ModuleAdminController{
 
     public function actionAdmin(){
    		$this->getMaxSorter();
+		Yii::app()->user->setFlash('warning', Yii::t('module_lang','moduleAdminHelp',
+			array('{link}'=>CHtml::link(tc('Currency'), array('/currency/backend/main/admin'))))
+		);
+
    		parent::actionAdmin();
    	}
 
@@ -73,6 +77,47 @@ class MainController extends ModuleAdminController{
             }
         }
         parent::actionActivate();
+    }
+
+
+    public function actionTest(){
+        return false;
+
+        @ini_set('max_execution_time', 3600);
+
+        $sql = 'SELECT id, message, translation_en FROM {{translate_message}} WHERE status=0 OR status=1';
+        $messages = Yii::app()->db->createCommand($sql)->queryAll();
+
+        //$messages = array('The required fields are marked with an asterisk (<span class="required">*</span>).');
+
+        $options = array(
+            'fileTypes' => array('php'),
+        );
+        $files = CFileHelper::findFiles(realpath(Yii::getPathOfAlias('application')), $options);
+
+        foreach($files as $file){
+            $subject = file_get_contents($file);
+            foreach($messages as $message){
+                //$tmp = preg_match_all('@\''.preg_quote($message['message']).'\'@', $subject, $matches);
+
+                $message['translation_en'] = str_replace('\'', '\\\'', $message['translation_en']);
+                $count = 0;
+                $tmp = preg_replace('@tc\(\''.preg_quote($message['message']).'\'\)@', 'tc(\''.$message['translation_en'].'\')', $subject, -1, $count);
+
+                if($tmp !== NULL){
+                    $subject = $tmp;
+                }
+                if($count){
+                    $sql = 'UPDATE {{translate_message}} SET message=translation_en WHERE id="'.$message['id'].'"';
+                    Yii::app()->db->createCommand($sql)->execute();
+                }
+                /*if($tmp > 0){
+                    $sql = 'UPDATE {{translate_message}} SET status=4 WHERE id="'.$message['id'].'"';
+                    Yii::app()->db->createCommand($sql)->execute();
+                }*/
+            }
+            file_put_contents($file, $subject);
+        }
     }
 
 }

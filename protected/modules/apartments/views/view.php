@@ -6,13 +6,27 @@ if (isset($model->city) && isset($model->city->name)) {
 
 if ($model->getStrByLang('description'))
 	$this->pageDescription = truncateText($model->getStrByLang('description'), 20);
+
+$searchUrl = Yii::app()->user->getState('searchUrl');
+if($searchUrl){
+	$this->breadcrumbs=array(
+		Yii::t('common', 'Apartment search') => $searchUrl,
+		truncateText($model->getStrByLang('title'), 10),
+	);
+} else {
+	$this->breadcrumbs=array(
+		Yii::t('common', 'Apartment search') => array('/quicksearch/main/mainsearch'),
+		truncateText($model->getStrByLang('title'), 10),
+	);
+}
+
 ?>
 
 <div class='div-pdf-fix'>
 	<?php
 		echo '<div class="floatleft printicon">';
 
-		$searchUrl = Yii::app()->user->getState('searchUrl');
+
 		if($searchUrl){
 			echo CHtml::link('<img src="'.Yii::app()->baseUrl.'/images/design/back2search.png"
 				alt="'.tc('Go back to search results').'" title="'.tc('Go back to search results').'"  />',
@@ -21,19 +35,15 @@ if ($model->getStrByLang('description'))
 
 		echo CHtml::link('<img src="'.Yii::app()->baseUrl.'/images/design/print.png"
 				alt="'.tc('Print version').'" title="'.tc('Print version').'"  />',
-			array('/apartments/main/view', 'id'=>$model->id, 'printable'=>true), array('target' => '_blank'));
+			$model->getUrl().'?printable=1', array('target' => '_blank'));
 
 
-		if(Yii::app()->user->getState('isAdmin')){
-			$editLink = Yii::app()->createUrl('/apartments/backend/main/update', array('id' => $model->id));
-		}elseif($model->owner_id == Yii::app()->user->id){
-			$editLink = Yii::app()->createUrl('/userads/main/update', array('id' => $model->id));
-		}
+		$editUrl = $model->getEditUrl();
 
-		if(isset($editLink) && $editLink){
+		if($editUrl){
 			echo CHtml::link('<img src="'.Yii::app()->baseUrl.'/images/design/edit.png"
 				alt="'.tt('Update apartment').'" title="'.tt('Update apartment').'"  />',
-				$editLink);
+				$editUrl);
 		}
 		echo '</div>';
 	?>
@@ -71,6 +81,5 @@ if ($model->getStrByLang('description'))
 	// show ad
 	$this->renderPartial('_view', array(
 		'data'=>$model,
-		'comment' => $comment,
 	));
 ?>

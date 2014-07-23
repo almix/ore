@@ -145,10 +145,15 @@ abstract class TbBaseMenu extends CMenu
 			$item['label'] .= ' <span class="caret"></span>';
 		}
 
-		if (isset($item['url']))
+		if (isset($item['url'])){
+			if(isset($item['linkOptions']['submit'])){
+				$item['linkOptions']['csrf'] = true;
+			}
+
 			return CHtml::link($item['label'], $item['url'], $item['linkOptions']);
-		else
+		} else {
 			return $item['label'];
+		}
 	}
 
 	/**

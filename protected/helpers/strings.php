@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -58,9 +58,19 @@ function utf8_ucfirst($string, $e ='utf-8') {
     return $string;
 }
 
+function utf8_strtolower($string, $e ='utf-8') {
+	if (function_exists('mb_strtolower')) {
+		$string = mb_strtolower($string, $e);
+	}
+	else {
+		$string = strtolower($string);
+	}
+	return $string;
+}
 
-function translit($str, $separator = 'dash', $lowercase = FALSE)
+function translit($str, $separator = 'dash', $lowercase = TRUE)
 {
+    $str = strip_tags($str);
 
 	$foreign_characters = array(
 		'/ä|æ|ǽ/' => 'ae',
@@ -145,21 +155,21 @@ function translit($str, $separator = 'dash', $lowercase = FALSE)
 		'&\#\d+?;'                => '',
 		'&\S+?;'                => '',
 		'\s+'                    => $replace,
-		'[^a-z0-9\-\._]' => '',
+		'[^a-z0-9\-_]' => '',
+		'_+'            => $replace,
 		$replace.'+'            => $replace,
 		$replace.'$'            => $replace,
 		'^'.$replace            => $replace,
 		'\.+$'                    => ''
 	);
 
-	$str = strip_tags($str);
-
-	foreach ($trans as $key => $val)
-	{
+	foreach ($trans as $key => $val) {
 		$str = preg_replace("#".$key."#i", $val, $str);
 	}
 
-	if ($lowercase === TRUE)
+    $str = rtrim($str, $replace);
+
+    if ($lowercase === TRUE)
 	{
 		if( function_exists('mb_convert_case') )
 		{
@@ -175,7 +185,7 @@ function translit($str, $separator = 'dash', $lowercase = FALSE)
 
 	$str = preg_replace('#[^'.$permitted_uri_chars.']#i', '', $str);
 
-	return trim( stripslashes( substr($str, 0, 100) ) );
+	return trim( stripslashes( substr($str, 0, 50) ) );
 }
 /**
  * Strip a string from the end of a string
@@ -206,3 +216,12 @@ function rstrtrim($str, $remove=null)
 	return rtrim($str);
 
 } //End of function rstrtrim($str, $remove=null)
+
+function cleanPostData($data){
+	$data = trim($data);
+	$data = strip_tags($data);
+	$data = addslashes($data);
+	$data = strtolower($data);
+	$data = preg_replace('~[^a-z0-9 \x80-\xFF]~i', "",$data);
+	return $data;
+}

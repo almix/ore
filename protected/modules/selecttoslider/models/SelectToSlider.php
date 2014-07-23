@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -40,11 +40,11 @@ class SelectToSlider extends CFormModel {
 
 			$cs = Yii::app()->clientScript;
 
-			$cs->registerCssFile(Yii::app()->request->baseUrl.'/css/ui/jquery-ui.multiselect.css');
-			$cs->registerCssFile($baseUrl . '/css/redmond/jquery-ui-1.7.1.custom.css');
-			$cs->registerCssFile($baseUrl . '/css/ui.slider.extras.css');
-			$cs->registerCssFile($baseUrl . '/css/search-form-select.css');
-			Yii::app()->clientScript->registerCoreScript('jquery-ui');
+//			$cs->registerCssFile(Yii::app()->request->baseUrl.'/css/ui/jquery-ui.multiselect.css');
+//			$cs->registerCssFile($baseUrl . '/css/redmond/jquery-ui-1.7.1.custom.css');
+//			$cs->registerCssFile($baseUrl . '/css/ui.slider.extras.css');
+//			$cs->registerCssFile($baseUrl . '/css/search-form-select.css');
+//			Yii::app()->clientScript->registerCoreScript('jquery-ui');
 
 			$cs->registerScriptFile($baseUrl.'/js/selectToUISlider.jQuery.js', CClientScript::POS_HEAD);
 

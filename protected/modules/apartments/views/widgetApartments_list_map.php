@@ -10,7 +10,7 @@ $criteriaForMap->addInCondition('t.id', $ids);
 ?>
 
 
-<div class="apartment_list_map">
+<div class="apartment_list_map" id="list_map_block" exist="1">
 	<?php $this->widget('application.modules.viewallonmap.components.ViewallonmapWidget', array('criteria' => $criteriaForMap, 'filterOn' => false, 'withCluster' => false)); ?>
 </div>
 

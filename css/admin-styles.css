@@ -21,6 +21,7 @@
 .height100	{height: 100px;}
 .height150	{height: 150px;}
 .height200	{height: 200px;}
+.height300	{height: 300px;}
 
 .noblock {display: inline !important; }
 .apartments_id_column, .id_column { width: 25px; }
@@ -131,7 +132,7 @@ div#messages {
 
 p.cost {
     color: #000000;
-    font: 20px/18px arial,sans-serif;
+    font: 20px/18px 'Roboto', Arial, sans-serif;
     margin: 8px 0 0;
     padding: 0 0 4px;
 }
@@ -146,12 +147,12 @@ div.column3 { width: 306px; float: left;}
 .viewapartment-subheader {
     /*background: url("../images/design/active.gif") repeat-x scroll 0 0 transparent;*/
     color: #204782;
-    font: 15px arial,sans-serif; height: 20px;margin: 0 2px;  padding: 3px 8px 2px;
+    font: 15px 'Roboto', Arial, sans-serif; height: 20px;margin: 0 2px;  padding: 3px 8px 2px;
     font-weight: bold;
 
 }
 
-#ymap, #gmap {
+#ymap, #gmap, #osmap {
 	margin-left: 30px;
 }
 div.flash-error, div.flash-notice, div.flash-success{ clear:both; padding:10px; margin:20px 0; border:2px solid #ddd;}
@@ -225,7 +226,7 @@ div.form .errorMessage
 .comment .pending { color:red;}
 #comments h3 { color: #000000 !important;}
 
-#ymap, #gmap { /*width: 670px;*/ height: 580px; }
+#ymap, #gmap, #osmap { /*width: 670px;*/ height: 580px; }
 #googleMap img{ max-width: none; }
 div.news-items { padding-bottom: 30px;}
 div.news-items p {padding: 0 !important; margin: 0 0 7px !important;}
@@ -254,10 +255,10 @@ font.title { color: #000000; font: bold 14px/20px arial; }
 }
 .seo-page-div {padding-top: 50px;}
 
-#ymap img {
+#ymap img, #osmap img {
     max-width: none;
 }
-articles-index {padding-bottom: 15px;}
+.articles-index {padding-bottom: 15px;}
 .floatleft-title {	float: left !important; position: relative; top: -10px;}
 .stat-views {font-size: 12px; color: #808080;}
 .ratingview-title {float:right; position: relative; left: 15px;}
@@ -359,11 +360,18 @@ div.service_not_active {
     float:left;
     margin: 5px 5px 5px 0;
 }
-div.paid_row {
-	font-size: 11px;
+div.paid_row,  div.paid_row_no{
+    font-size: 11px;
 }
-div.paid_row span{
-	font-weight: bold;
+div.paid_row span, div.paid_row_no span{
+    font-weight: normal;
+}
+div.paid_row span.valid_till, div.paid_row_no span.valid_till{
+    font-weight: normal;
+    display: block;
+}
+div.paid_row span.display_block, div.paid_row_no span.display_block{
+    display: block;
 }
 
 div.no-mrg input[type="checkbox"] {
@@ -403,7 +411,7 @@ div.no-mrg input[type="checkbox"] {
 a.apt_btn {
     background: url("../images/design/active.gif") repeat-x scroll 0 0 transparent;
     color: #FFFFFF !important;
-    font: 14px arial,sans-serif;
+    font: 14px 'Roboto', Arial, sans-serif;
     margin: 0 10px 0 0;
     padding: 6px 20px;
     text-decoration: none !important;
@@ -489,4 +497,135 @@ a.apt_btn {
 
 .viewapartment-description {
     margin-top: 5px;
+}
+
+.form_tip {
+    font-size: 10px;
+}
+
+.news-image {
+	float: left;
+	padding: 10px 0px;
+}
+
+.news-image-list {
+	float: left;
+	padding: 5px 10px 10px 0px;
+}
+
+.view-video-file {
+	display:block;
+	width:560px;
+	height:340px;
+}
+
+
+/* layout */
+.panorama-view {padding: 10px 0;}
+.panorama,.panorama-view{width:890px;height:500px;overflow:hidden}
+.panorama,.panorama-container{position:relative}
+.panorama-container img{height:100%;position:absolute;top:0}
+.panorama .info,.panorama-view .area{position:absolute;display:block}
+.panorama .info{right:10px;bottom:10px}
+
+/* style */
+.panorama-view{cursor:pointer;}
+.panorama-view.grab{cursor:pointer;}
+.panorama .info{padding:6px;opacity:0.4;background-color:#000;color:#fff;font:11px bold 'Roboto', Arial, sans-serif;text-decoration:none}
+.panorama .info:hover{opacity:0.6}
+.panorama-view .area{opacity:0.2;background-color:#000;cursor:pointer}
+.panorama-view .area:hover{opacity:0.4}
+.panorama-view img{user-select:none;-o-user-select:none;-moz-user-select:none;-webkit-user-select:none)}
+.panorama-swf {padding: 10px 0;}
+
+.fields_for_search { border: #CCC 1px dotted; padding: 0 10px; }
+
+#sortable1, #sortable2 { list-style-type: none; float: left; }
+#sortable1 li, #sortable2 li { font-size: 1.2em; padding: 3px; margin: 3px; }
+.connectedSortable {
+    border: 1px solid #CCCCCC;
+    margin: 0;
+    min-height: 270px;
+    min-width: 309px;
+    padding: 7px;
+}
+.sortBlue{ background-color: #006dcc; }
+
+#date_end_activity, #set_period { padding-bottom: 10px; }
+
+
+.user-ava {
+    width: 90px;
+    height: 90px;
+    float: left;
+    padding-right: 10px;
+}
+.user-ava-crop {
+    display: inline-block;
+    width: 83px;
+    height: 83px;
+    overflow: hidden;
+    border: 2px solid #FFFFFF;
+    background: #FFFFFF;
+    outline: 1px solid #CCCCCC;
+    /*margin: 10px;*/
+}
+.user-ava-crop img {
+    width: 83px;
+    border: none;
+    margin: 0;
+    padding: 0;
+}
+
+.apartment-user-info {
+    float: right;
+    width: 300px;
+    position: relative;
+}
+
+.user-ava-username {
+    text-align: center;
+}
+
+.user-info-ava {
+    width: 90px;
+    float: left;
+}
+
+.user-info-right {
+    width: 180px;
+    position: absolute;
+    right: 15px;
+}
+
+ul.user-info-ul li {
+    list-style: none;
+    font-size: 12px;
+}
+
+#owner-phone {
+    left: 40px;
+    position: absolute;
+}
+
+.errorSummary {
+    background: none repeat scroll 0 0 #FFEEEE;
+    border: 2px solid #CC0000;
+    font-size: 0.9em;
+    margin: 0 0 20px;
+    padding: 7px 7px 12px;
+}
+
+#gmap-panorama {
+    height: 500px;
+    width: 100%;
+    padding: 0px;
+    margin: 30px 0 0 0;
+}
+#gmap-panorama img {
+    max-width: none;
+}
+#gmap-panorama label {
+    width: auto;
+    display:inline;
 }

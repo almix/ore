@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -19,6 +19,9 @@
 class SimilarAdsWidget extends CWidget {
 
 	public function getViewPath($checkTheme=false){
+		if($checkTheme && ($theme=Yii::app()->getTheme())!==null){
+			return $theme->getViewPath().DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR.'similarads';
+		}
 		return Yii::getPathOfAlias('application.modules.similarads.views');
 	}
 
@@ -34,10 +37,20 @@ class SimilarAdsWidget extends CWidget {
 			$criteria->addCondition('t.id != :id');
 			$criteria->params[':id'] = $data->id;
 		}
-		if ($data->city_id) {
-			$criteria->addCondition('city_id = :city_id');
-			$criteria->params[':city_id'] = $data->city_id;
+
+		if (issetModule('location') && param('useLocation', 1)) {
+			if ($data->loc_city) {
+				$criteria->addCondition('loc_city = :loc_city');
+				$criteria->params[':loc_city'] = $data->loc_city;
+			}
 		}
+		else {
+			if ($data->city_id) {
+				$criteria->addCondition('city_id = :city_id');
+				$criteria->params[':city_id'] = $data->city_id;
+			}
+		}
+
 		if ($data->obj_type_id) {
 			$criteria->addCondition('obj_type_id = :obj_type_id');
 			$criteria->params[':obj_type_id'] = $data->obj_type_id;

@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -439,6 +439,11 @@ class Images extends ParentModel {
 		}
 	}
 
+	public static function deleteDbByObjectId($objId){
+		$sql = 'DELETE FROM {{images}} WHERE id_object=:id';
+		Yii::app()->db->createCommand($sql)->execute(array(':id' => $objId));
+	}
+
 	public static function getMainImageData($images, $id = null){
 		$image = null;
 		if($id !== null){
@@ -456,6 +461,13 @@ class Images extends ParentModel {
 		}
 
 		return $image;
+	}
+
+	public static function getApartmentsCountImages($ids = array()) {
+		$sql = 'SELECT id_object, COUNT(id) as count FROM {{images}} WHERE id_object IN ('.implode(',', $ids).') GROUP BY id_object';
+		$res = Yii::app()->db->createCommand($sql)->queryAll();
+
+		return CHtml::listData($res, 'id_object', 'count');
 	}
 
 	public static function toBytes($str){

@@ -1,6 +1,7 @@
 <?php
 $this->breadcrumbs=array(
-	$apartment->getStrByLang('title') => $apartment->getUrl(),
+	Yii::t('common', 'Apartment search') => array('/quicksearch/main/mainsearch'),
+	truncateText(CHtml::encode($apartment->getStrByLang('title')), 8) => $apartment->getUrl(),
 	tt('Booking apartment'),
 );
 

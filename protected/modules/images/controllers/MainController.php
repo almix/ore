@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -114,7 +114,9 @@ class MainController extends ModuleUserController{
 	public function actionDeleteImage($id){
 		$model = $this->checkOwnerImage($id);
 
+		unset($model->sorter);
 		$model->delete();
+
 		if($model->is_main){
 			$sql = 'SELECT id FROM {{images}} WHERE is_main=1 AND id_object=:id';
 			echo Yii::app()->db->createCommand($sql)->queryScalar(array(':id' => $model->id_object));
@@ -125,6 +127,8 @@ class MainController extends ModuleUserController{
 		$model = $this->checkOwner($id);
 
 		$ids = Yii::app()->request->getPost('image');
+
+		//$ids = Yii::app()->request->getParam('image');
 
 		if($ids){
 			$sorter = 0;

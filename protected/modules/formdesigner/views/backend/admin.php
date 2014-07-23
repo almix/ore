@@ -1,6 +1,13 @@
 <?php
 $this->adminTitle = tc('The forms designer');
 
+if(issetModule('formeditor')){
+    $this->menu = array(
+        array('label'=>tt('Add field', 'formeditor'), 'url'=>array('/formeditor/backend/main/create')),
+        array('label'=>tt('Edit search form', 'formeditor'), 'url'=>array('/formeditor/backend/search/editSearchForm')),
+    );
+}
+
 Yii::app()->clientScript->registerScript('search', "
 $('#form-designer-filter').submit(function(){
     $('#form-designer-grid').yiiGridView('update', {
@@ -27,14 +34,20 @@ $this->widget('CustomGridView', array(
     'columns'=>array(
         array(
             'name' => 'field',
-            'value' => 'Apartment::model()->getAttributeLabel($data->field)'
+            'value' => '$data->getLabel()'
         ),
+
         array(
-            'header' => 'Показывать для',
+            'header' => tt('Show for property types', 'formdesigner'),
             'value' => '$data->getTypesHtml()',
             'type' => 'raw',
             'sortable' => false,
         ),
+
+        array(
+            'name' => 'tip',
+        ),
+
         array(
             'name' => 'visible',
             'value' => '$data->getVisibleHtml()',
@@ -42,15 +55,19 @@ $this->widget('CustomGridView', array(
             'sortable' => false,
         ),
 
-//        array(
-//            'class'=>'CButtonColumn',
-//        ),
+        array(
+            'class'=>'bootstrap.widgets.TbButtonColumn',
+            'template' => '{update}{delete}',
+            'buttons' => array(
+                'update' => array(
+                    'url' => '$data->getUpdateUrl()',
+                ),
+                'delete' => array(
+                    'visible' => '$data->type != FormDesigner::TYPE_DEFAULT',
+                    'url' => 'Yii::app()->createUrl("/formeditor/backend/main/delete", array("id" => $data->id))'
+                ),
+            )
+        ),
     ),
 ));
 ?>
-
-<script type="text/javascript">
-    $('.formd_link').live('click', function(){
-        console.log($(this).data('id'));
-    });
-</script>

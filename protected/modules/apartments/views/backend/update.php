@@ -22,10 +22,8 @@ $this->adminTitle = tt('Update apartment');
 		);*/
 	}
 
-	//$model->metroStations = $model->getMetroStations();
 	$this->renderPartial('_form',array(
 			'model'=>$model,
-			'categories' => $categories,
 			'supportvideoext' => $supportvideoext,
 			'supportvideomaxsize' => $supportvideomaxsize,
 	));

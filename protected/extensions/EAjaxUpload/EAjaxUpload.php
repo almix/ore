@@ -54,6 +54,8 @@ class EAjaxUpload extends CWidget {
 	public $config = array();
 	public $css = null;
 
+    public $label;
+
 	public function run(){
 		if(empty($this->config['action'])) {
 			throw new CException('EAjaxUpload: param "action" cannot be empty.');
@@ -66,6 +68,10 @@ class EAjaxUpload extends CWidget {
 		if(empty($this->config['sizeLimit'])) {
 			throw new CException('EAjaxUpload: param "sizeLimit" cannot be empty.');
 		}
+
+        if(!$this->label){
+            $this->label = tc('Upload files');
+        }
 
 		unset($this->config['element']);
 
@@ -92,7 +98,7 @@ class EAjaxUpload extends CWidget {
 					<div class="qq-upload-drop-area">
 						<span>'.tc('Drop files here to upload').'</span>
 					</div>
-					<div class="qq-upload-button">'.tc('Upload files').'</div>
+					<div class="qq-upload-button">'.$this->label.'</div>
 					<ul class="qq-upload-list"></ul>
 				</div>',
 			'fileTemplate' => '<li><span class="qq-upload-file"></span><span class="qq-upload-spinner"></span><span class="qq-upload-size"></span>

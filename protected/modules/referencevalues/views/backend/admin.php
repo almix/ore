@@ -26,7 +26,7 @@ $this->widget('CustomGridView', array(
         ),
 		array(
 			'header' => tt('Category'),
-			'value' => '$data->category->catTitle()',
+			'value' => '$data->category->getTitle()',
 			'filter' => CHtml::dropDownList('ReferenceValues[category_filter]', $currentCategory, $this->getCategories()),
 			'htmlOptions' => array(
 				//'class' => 'referencevalues_category_column',

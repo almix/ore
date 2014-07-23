@@ -3,8 +3,8 @@
 /* * ********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- * 	version				:	1.5.1
- * 	copyright			:	(c) 2013 Monoray
+ * 	version				:	1.8.2
+ * 	copyright			:	(c) 2014 Monoray
  * 	website				:	http://www.monoray.ru/
  * 	contact us			:	http://www.monoray.ru/contact
  *
@@ -46,7 +46,31 @@ class Controller extends CController {
 	public $advertPos5 = array();
 	public $advertPos6 = array();
 
-	protected function beforeAction($action) {
+	public $apInComparison = array();
+	public $assetsGenPath;
+	public $assetsGenUrl;
+
+	public $maxLengthSearch = 15; // максимальное количество слов во фразе
+	public $minLengthSearch = 4; // минимальная длина искомого слова - http://dev.mysql.com/doc/refman/5.0/en/fulltext-fine-tuning.html
+
+    public $showSearchForm = true;
+
+    protected function beforeAction($action) {
+		//echo Yii::app()->request->csrfToken;
+		Yii::app()->clientScript->registerScript('ajax-csrf', '
+			$.ajaxPrefilter(function(options, originalOptions, jqXHR){
+				if(originalOptions.type){
+					var type = originalOptions.type.toLowerCase();
+				} else {
+					var type = "";
+				}
+
+				if(type == "post" && typeof originalOptions.data === "object"){
+					options.data = $.extend(originalOptions.data, { "'.Yii::app()->request->csrfTokenName.'": "'.Yii::app()->request->csrfToken.'" });
+					options.data = $.param(options.data);
+				}
+			});
+		', CClientScript::POS_END, array());
 
 		if (!Yii::app()->user->getState('isAdmin')) {
 			$currentController = Yii::app()->controller->id;
@@ -80,11 +104,23 @@ class Controller extends CController {
 
 	function init() {
 
-		if (!file_exists(ALREADY_INSTALL_FILE) && !(Yii::app()->controller->module && Yii::app()->controller->module->id == 'install')) {
+		if (!oreInstall::isInstalled() && !(Yii::app()->controller->module && Yii::app()->controller->module->id == 'install')) {
 			$this->redirect(array('/install'));
 		}
 
 		setLang();
+
+		$modulesToCheck = ConfigurationModel::getModulesList();
+		foreach($modulesToCheck as $module){
+			if(param('module_enabled_'.$module) === null){
+				ConfigurationModel::createValue('module_enabled_'.$module, 0);
+				Yii::app()->params['module_enabled_'.$module] = 0;
+			}
+		}
+		unset($modulesToCheck);
+
+		$this->assetsGenPath = Yii::getPathOfAlias('webroot.assets');
+		$this->assetsGenUrl = Yii::app()->getBaseUrl(true).'/assets/';
 
 		Yii::app()->user->setState('menu_active', '');
 
@@ -110,36 +146,22 @@ class Controller extends CController {
 
 		if(Yii::app()->getModule('menumanager')){
 			if(!(Yii::app()->controller->module && Yii::app()->controller->module->id == 'install')){
-				$this->infoPages = Menu::getMenuItems();
+				$this->infoPages = Menu::getMenuItems(true);
 			}
 		}
 
-        $subItems = array();
-
         if(!Yii::app()->user->isGuest && !Yii::app()->user->getState('isAdmin')){
-            $subItems = array(
-                array(
-                    'label' => tt('Manage apartments', 'apartments'),
-                    'url' => array('/userads/main/index'),
-                ),
-            );
-
-            if(issetModule('payment')){
-                $subItems[] = array(
-                    'label' => tc('MODULE of Payments & Payment systems '),
-                    'url' => array('/usercpanel/main/payments'),
-                );
-                $subItems[] = array(
-                    'label' => tc('Add funds to account'),
-                    'url' => Yii::app()->createUrl('/paidservices/main/index', array('paid_id' => PaidServices::ID_ADD_FUNDS)),
-                );
-            }
+            $subItems = HUser::getMenu();
+		} else {
+            $subItems = array();
         }
+
+        $urlAddAd = (Yii::app()->user->isGuest && issetModule('guestad')) ? array('/guestad/main/create') : array('/userads/main/create');
 
 		$this->aData['userCpanelItems'] = array(
 			array(
 				'label' => tt('Add ad', 'common'),
-				'url' => array('/userads/main/create'),
+				'url' => $urlAddAd,
 				'visible' => param('useUserads', 0) == 1
 			),
 			array(
@@ -147,7 +169,7 @@ class Controller extends CController {
 				'visible' => param('useUserads', 0) == 1
 			),
 			array('label' => tt('Contact us', 'common'), 'url' => array('/contactform/main/index')),
-			array('label' => '|'),
+			array('label' => '|', 'visible' => Yii::app()->user->getState('isAdmin') === null),
 			array(
 				'label' => tt('Reserve apartment', 'common'),
 				'url' => array('/booking/main/mainform'),
@@ -159,36 +181,46 @@ class Controller extends CController {
 				'label' => Yii::t('common', 'Control panel'),
 				'url' => array('/usercpanel/main/index'),
 				'visible' => Yii::app()->user->getState('isAdmin') === null,
-                'items' => $subItems,
-                'submenuOptions'=>array(
-                    'class'=>'sub_menu_dropdown'
-                ),
+				'items' => $subItems,
+				'submenuOptions'=>array(
+					'class'=>'sub_menu_dropdown'
+				),
 			),
-			array('label' => '|', 'visible' => Yii::app()->user->getState('isAdmin') === null && !Yii::app()->user->isGuest),
-			array('label' => tt('Logout', 'common'), 'url' => array('/site/logout'), 'visible' => !Yii::app()->user->isGuest),
 		);
 
+        if(!Yii::app()->user->isGuest){
+            $user = HUser::getModel();
+            $this->aData['userCpanelItems'][] = array('label' => '|');
+            $this->aData['userCpanelItems'][] = array('label' => '(' . $user->username . ') ' . tt('Logout', 'common'), 'url' => array('/site/logout'));
+        }
+
 		$this->aData['topMenuItems'] = $this->infoPages;
-		parent::init();
-	}
 
-	public function render($view,$data=null,$return=false) {
-		if($this->beforeRender($view)) {
-			$output=$this->renderPartial($view,$data,true);
-			if(($layoutFile=$this->getLayoutFile($this->layout))!==false)
-				$output=$this->renderFile($layoutFile,array('content'=>$output),true);
+		// comparison list
+		if (issetModule('comparisonList')) {
+			if (!Yii::app()->user->isGuest) {
+				$resultCompare = ComparisonList::model()->findAllByAttributes(
+					array(
+						'user_id' => Yii::app()->user->id,
+					)
+				);
+			}
+			else {
+				$resultCompare = ComparisonList::model()->findAllByAttributes(
+					array(
+						'session_id' => Yii::app()->session->sessionId,
+					)
+				);
+			}
 
-			$this->afterRender($view,$output);
-
-
-			$output=$this->processOutput($output);
-			eval(base64_decode('aWYgKGlzRnJlZSgpKSB7CgkkdXJsVG9Qcm9kdWN0ID0gJ2h0dHA6Ly9tb25vcmF5Lm5ldC9wcm9kdWN0cy82LW9wZW4tcmVhbC1lc3RhdGUnOwoJaWYgKFlpaTo6YXBwKCktPmxhbmd1YWdlID09ICdydScpCgkJJHVybFRvUHJvZHVjdCA9ICdodHRwOi8vbW9ub3JheS5ydS9wcm9kdWN0cy82LW9wZW4tcmVhbC1lc3RhdGUnOwoKCXByZWdfbWF0Y2hfYWxsICgnIzxwIGNsYXNzPSJzbG9nYW4iPiguKik8L3A+I2lzVScsICRvdXRwdXQsICRtYXRjaGVzICk7CglpZiAoIGlzc2V0KCAkbWF0Y2hlc1sxXVswXSApICYmICFlbXB0eSggJG1hdGNoZXNbMV1bMF0gKSApIHsKCQkkaW5zZXJ0PSc8cCBzdHlsZT0idGV4dC1hbGlnbjogY2VudGVyOyBtYXJnaW46IDA7IHBhZGRpbmc6IDA7Ij5Qb3dlcmVkIGJ5IDxhIGhyZWY9IicuJHVybFRvUHJvZHVjdC4nIj5PcGVuIFJlYWwgRXN0YXRlPC9hPjwvcD4nOwoJCSRvdXRwdXQ9c3RyX3JlcGxhY2UoJG1hdGNoZXNbMF1bMF0sICRtYXRjaGVzWzBdWzBdLiRpbnNlcnQsICRvdXRwdXQpOwoJfQoJZWxzZSB7CgkJJGluc2VydD0nPGRpdiBjbGFzcz0iZm9vdGVyIj48cCBzdHlsZT0idGV4dC1hbGlnbjogY2VudGVyOyBtYXJnaW46IDA7IHBhZGRpbmc6IDA7Ij5Qb3dlcmVkIGJ5IDxhIGhyZWY9IicuJHVybFRvUHJvZHVjdC4nIj5PcGVuIFJlYWwgRXN0YXRlPC9hPjwvcD48L3A+PC9kaXY+JzsKCQkkb3V0cHV0PXN0cl9yZXBsYWNlKCc8ZGl2IGlkPSJsb2FkaW5nIicsICRpbnNlcnQuJzxkaXYgaWQ9ImxvYWRpbmciJywgJG91dHB1dCk7Cgl9Cgl1bnNldCgkdXJsVG9Qcm9kdWN0KTsKCXVuc2V0KCRtYXRjaGVzKTsKCXVuc2V0KCRpbnNlcnQpOwp9'));
-
-			if($return)
-				return $output;
-			else
-				echo $output;
+			if ($resultCompare) {
+				foreach($resultCompare as $item) {
+					$this->apInComparison[] = $item->apartment_id;
+				}
+			}
 		}
+
+		parent::init();
 	}
 
 	public static function disableProfiler() {
@@ -202,7 +234,9 @@ class Controller extends CController {
 	}
 
 	public function createLangUrl($lang='en', $params = array()){
-		if(issetModule('seo') && isset(SeoFriendlyUrl::$seoLangUrls[$lang])){
+		$langs = Lang::getActiveLangs();
+
+		if(count($langs) > 1 && issetModule('seo') && isset(SeoFriendlyUrl::$seoLangUrls[$lang])){
 			if (count($params))
 				return SeoFriendlyUrl::$seoLangUrls[$lang].'?'.http_build_query($params);
 
@@ -221,13 +255,13 @@ class Controller extends CController {
 		Yii::app()->clientscript->scriptMap['jquery.min.js'] = false;
 		Yii::app()->clientscript->scriptMap['jquery-ui.min.js'] = false;
 		Yii::app()->clientscript->scriptMap['bootstrap.min.js'] = false;
+		Yii::app()->clientscript->scriptMap['jquery-ui-i18n.min.js'] = false;
 	}
 
 	public static function getCurrentRoute(){
 		$moduleId = isset(Yii::app()->controller->module) ? Yii::app()->controller->module->id.'/' : '';
 		return trim($moduleId.Yii::app()->controller->getId().'/'.Yii::app()->controller->getAction()->getId());
 	}
-
 
 	public function setSeo(SeoFriendlyUrl $seo){
 		$this->seoTitle = $seo->getStrByLang('title');
@@ -260,4 +294,107 @@ class Controller extends CController {
 			$this->redirect(array('/userads/main/update', 'id' => $apId));
 		}
 	}
+	public function actionDeletePanorama($id = null, $apId = null) {
+		if (Yii::app()->user->isGuest)
+			throw404();
+
+		if (!$id && !$apId)
+			throw404();
+
+		if (Yii::app()->user->getState('isAdmin')) {
+			$modelPanorama = ApartmentPanorama::model()->findByPk($id);
+			$modelPanorama->delete();
+
+			$this->redirect(array('/apartments/backend/main/update', 'id' => $apId));
+		}
+		else {
+			$modelApartment = Apartment::model()->findByPk($apId);
+			if($modelApartment->owner_id != Yii::app()->user->id){
+				throw404();
+			}
+
+			$modelPanorama = ApartmentPanorama::model()->findByPk($id);
+			$modelPanorama->delete();
+
+			$this->redirect(array('/userads/main/update', 'id' => $apId));
+		}
+	}
+
+	public static function returnBookingTableStatusHtml($data, $tableId, $onclick = 0, $ignore = 0){
+		$statuses = Bookingtable::getAllStatuses();
+
+		$items = CJavaScript::encode($statuses);
+
+		$options = array(
+			'onclick' => 'ajaxSetBookingTableStatus(this, "'.$tableId.'", "'.$data->id.'", "'.$items.'"); return false;',
+		);
+
+		return '<div align="center" class="editable_select" id="editable_select-'.$data->id.'">'.CHtml::link($statuses[$data->active], '#' , $options).'</div>';
+	}
+
+	public function actionBookingTableActivate(){
+		$field = isset($_GET['field']) ? $_GET['field'] : 'active';
+
+		if (Yii::app()->request->getParam('id') && (Yii::app()->request->getParam('value') != null)) {
+			$this->scenario = 'update_status';
+			$action = Yii::app()->request->getParam('value', null);
+			$id = Yii::app()->request->getParam('id', null);
+			$availableStatuses = Bookingtable::getAllStatuses();
+
+			if (!array_key_exists($action, $availableStatuses)) {
+				$action = 0;
+			}
+		}
+
+		if(!(!$id && $action === null)){
+			$model = $this->loadModelUserBookingTable($id);
+
+			if($this->scenario){
+				$model->scenario = $this->scenario;
+			}
+
+			if($model){
+				$model->$field = $action;
+				$model->save(false);
+
+				if (issetModule('bookingcalendar')) {
+					if ($field == 'active' && $action == Bookingtable::STATUS_CONFIRM) {
+						$modelBookingCalendar = new Bookingcalendar;
+
+						$modelBookingCalendar->date_start = $model->date_start;
+						$modelBookingCalendar->date_end = $model->date_end;
+						$modelBookingCalendar->status = Bookingcalendar::STATUS_BUSY;
+						$modelBookingCalendar->apartment_id = $model->apartment_id;
+						$modelBookingCalendar->save(false);
+					}
+				}
+			}
+		}
+
+		echo CHtml::link($availableStatuses[$action]);
+	}
+
+	public function loadModelUserBookingTable($id) {
+		$model = $this->loadModel($id);
+
+		if (!Yii::app()->user->getState('isAdmin')) {
+			$sql = 'SELECT id FROM {{apartment}} WHERE owner_id = "'.Yii::app()->user->id.'" ';
+			$apIds = Yii::app()->db->createCommand($sql)->queryColumn();
+
+			if(!in_array($model->apartment_id, $apIds)) {
+				throw404();
+			}
+		}
+
+		return $model;
+	}
+
+    public function setActiveMenu($key, $pos = 'cpanel'){
+        $this->aData[$pos] = array();
+        $this->aData[$pos][$key] = true;
+    }
+
+    public function menuIsActive($key, $pos = 'cpanel'){
+        return isset($this->aData[$pos][$key]) && $this->aData[$pos][$key] === true;
+    }
 }

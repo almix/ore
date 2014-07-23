@@ -8,6 +8,9 @@
 
 require_once(dirname(__FILE__) . '/../helpers/common.php');
 require_once(dirname(__FILE__) . '/../helpers/strings.php');
+require_once(dirname(__FILE__) . '/../helpers/HUser.php');
+require_once(dirname(__FILE__) . '/../helpers/HDate.php');
+require_once(dirname(__FILE__) . '/../helpers/HAjax.php');
 Yii::setPathOfAlias('bootstrap', dirname(__FILE__).'/../extensions/bootstrap');
 
 $config = array(
@@ -16,6 +19,8 @@ $config = array(
 
 	'sourceLanguage' => 'en',
 	'language' => 'ru',
+
+	//'theme' => 'classic',
 
 	'preload' => array(
 		'log',
@@ -35,6 +40,8 @@ $config = array(
 		'ext.eauth.custom_services.CustomVKService',
 		'ext.eauth.custom_services.CustomFBService',
 		'ext.eauth.custom_services.CustomTwitterService',
+		'ext.eauth.custom_services.CustomMailruService',
+		'ext.setReturnUrl.ESetReturnUrlFilter',
 
 		'application.models.*',
 		'application.components.*',
@@ -44,6 +51,7 @@ $config = array(
 		'application.modules.booking.models.*',
 
 		'application.modules.comments.models.Comment',
+		'application.modules.comments.models.CommentForm',
 		'application.modules.windowto.models.WindowTo',
 		'application.modules.apartments.models.*',
 		'application.modules.news.models.*',
@@ -71,6 +79,11 @@ $config = array(
 		'zii.behaviors.CTimestampBehavior',
 		'application.modules.apartmentsComplain.models.ApartmentsComplain',
 		'application.modules.apartmentsComplain.models.ApartmentsComplainReason',
+		'application.modules.comparisonList.models.ComparisonList',
+		'application.modules.articles.models.Article',
+		'application.modules.infopages.models.InfoPages',
+		'application.modules.reviews.models.Reviews',
+		'application.modules.bookingtable.models.Bookingtable',
 	),
 
 	'modules' => array(
@@ -105,7 +118,13 @@ $config = array(
 		'rss',
 		'images',
 		'apartmentsComplain',
-        'formdesigner',
+		'formdesigner',
+		'comparisonList',
+		'guestad',
+		'reviews',
+		'bookingtable',
+		'modules',
+		'infopages',
 
 		// uncomment the following to enable the Gii tool
 		/*'gii'=>array(
@@ -118,6 +137,12 @@ $config = array(
 			),
 		),*/
 
+	),
+
+	'controllerMap'=>array(
+		'min'=>array(
+			'class'=>'ext.minScript.controllers.ExtMinScriptController',
+		),
 	),
 
 	'components' => array(
@@ -140,19 +165,6 @@ $config = array(
 			'cachingTime' => 0, // caching configuration for 180 days
 		),
 
-		// uncomment to minify js and css
-		/*'clientScript' => array(
-			'class' => 'ext.minify.EClientScript',
-			'combineScriptFiles' => true, // By default this is set to false, set this to true if you'd like to combine the script files
-			'combineCssFiles' => true, // By default this is set to false, set this to true if you'd like to combine the css files
-			'optimizeScriptFiles' => false,	// @since: 1.1
-			'optimizeCssFiles' => false,	// @since: 1.1
-			'cssForIgnore' => array('bootstrap.min.css', 'jquery-ui-1.7.1.custom.css', 'jquery-ui.multiselect.css',
-				'bootstrap-responsive.min.css'),
-			'scriptsForIgnore' => array('jquery.js', 'jquery.min.js', 'jquery.ui.js', 'jquery-ui.min.js',
-				'bootstrap.min.js', 'jquery-ui-i18n.min.js', 'jquery.jcarousel.min.js'),
-		),*/
-
 		'cache' => array(
 			'class' => 'system.caching.CFileCache',
 			/*'class'=>'system.caching.CMemCache',
@@ -162,45 +174,15 @@ $config = array(
 			),*/
 		),
 
-		'urlManager' => array(
-			'urlFormat' => 'path',
+		'request'=>array(
+			'class' => 'application.components.CustomHttpRequest',
+			'enableCsrfValidation'=>true,
+		),
+
+		'urlManager'=>array(
+			'urlFormat'=>'path',
 			'showScriptName' => false,
-			'class' => 'application.components.CustomUrlManager',
-			'rules' => array(
-				'sitemap.xml' => 'sitemap/main/viewxml',
-
-				'version' => '/site/version',
-
-				'sell' => 'quicksearch/main/mainsearch/type/2',
-				'rent' => 'quicksearch/main/mainsearch/type/1',
-
-				'property/<id:\d+>' => 'apartments/main/view',
-				'property/<url:[-a-zA-Z0-9_+\.]{1,255}>'=>'apartments/main/view',
-				'news' => 'news/main/index',
-				'news/<id:\d+>' => 'news/main/view',
-				'faq' => 'articles/main/index',
-				'faq/<id:\d+>' => 'articles/main/view',
-				'contact-us' => 'contactform/main/index',
-				'specialoffers' => 'specialoffers/main/index',
-				'sitemap' => 'sitemap/main/index',
-				'page/<id:\d+>' => 'menumanager/main/view',
-
-				'rss' => 'rss/main/subscribe',
-				'rss/<feed:\w+>' => 'rss/main/read',
-
-				'service-<serviceId:\d+>' => 'quicksearch/main/mainsearch',
-				'install/config' => 'install/main/config',
-
-				'<controller:(quicksearch|specialoffers)>/main/index' => '<controller>/main/index',
-				'' => 'site/index',
-				//'<_m>/<_c>/<_a>*' => '<_m>/<_c>/<_a>',
-				//'<_c>/<_a>*' => '<_c>/<_a>',
-				//'<_c>' => '<_c>',
-
-
-				'/property/'=>'quicksearch/main/mainsearch',
-				'<module:\w+>/backend/<controller:\w+>/<action:\w+>' => '<module>/backend/<controller>/<action>', // CGridView ajax
-			),
+			'class'=>'application.components.CustomUrlManager',
 		),
 
 		'mailer' => array(
@@ -257,8 +239,30 @@ $config = array(
 		'maxImgFileSize' => 8 * 1024 * 1024, // maximum file size in bytes
 		'minImgFileSize' => 5 * 1024, // min file size in bytes
 		'langToInstall' => 'ru',
+		'countListingsInComparisonList' => 6, # максимум объявлений в списке сравнения
+		'searchMaxField' => 15, // максимальное кол-во полей в поиске,
+		'useMinify' => true,
+		'useLangPrefixIfOneLang' => 0, // использовать префикс языка в url если активен только 1 язык
 	),
 );
+
+$addons['components'] = array(
+	'session' => array(
+		'class' => 'CDbHttpSession',
+		'connectionID' => 'db',
+		'sessionTableName' => '{{users_sessions}}',
+		'autoCreateSessionTable' => false, //!!!
+	),
+	'clientScript'=>array(
+		'class'=>'ext.minScript.components.ExtMinScript',
+		'minScriptLmCache' => (YII_DEBUG) ? 0 : 3600,
+		'minScriptDisableMin' => array('/[-\.]min\.(?:js|css)$/i', '/bootstrap.js$/i', '/jquery.js$/i', '/ckeditor.js$/i', '/[-\.]pack\.(?:js|css)$/i'),
+	),
+);
+
+if(oreInstall::isInstalled()){
+	$config = CMap::mergeArray($config, $addons);
+}
 
 $db = require(dirname(__FILE__) . '/db.php');
 if($db === 1){

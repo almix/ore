@@ -2,8 +2,8 @@
 /**********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- *	version				:	1.5.1
- *	copyright			:	(c) 2013 Monoray
+ *	version				:	1.8.2
+ *	copyright			:	(c) 2014 Monoray
  *	website				:	http://www.monoray.ru/
  *	contact us			:	http://www.monoray.ru/contact
  *
@@ -19,6 +19,9 @@
 class ApartmentVideo extends ParentModel {
 	public $supportExt = 'flv, mp4';
 	public $fileMaxSize = 10485760; /* 1024 * 1024 * 10 - 10 MB */
+
+	public $path = 'webroot.uploads.video';
+	public $url = 'uploads/video';
 
 	public function init() {
 		$fileMaxSize['postSize'] = toBytes(ini_get('post_max_size'));
@@ -83,16 +86,9 @@ class ApartmentVideo extends ParentModel {
 	}
 
 	public function beforeDelete() {
-		// delete video file
-		$sql = 'SELECT 	apartment_id, video_file FROM {{apartment_video}} WHERE id = "'.$this->id.'"';
-		$result = Yii::app()->db->createCommand($sql)->queryRow();
-
-		$apartmentId = $result['apartment_id'];
-		$video_file = $result['video_file'];
-
-		if ($video_file) {
-			$pathVideo = Yii::getPathOfAlias('webroot.uploads.video').DIRECTORY_SEPARATOR.$apartmentId.DIRECTORY_SEPARATOR;
-			deleteFile($pathVideo, $video_file);
+		if($this->video_file){
+			$pathVideo = Yii::getPathOfAlias($this->path).DIRECTORY_SEPARATOR.$this->apartment_id.DIRECTORY_SEPARATOR;
+			deleteFile($pathVideo, $this->video_file);
 		}
 
 		return parent::beforeDelete();
@@ -106,6 +102,22 @@ class ApartmentVideo extends ParentModel {
 		return $return;
 	}
 
+	public function isFile(){
+		return $this->video_file ? true : false;
+	}
+
+	public function isHtml(){
+		return $this->video_html ? true : false;
+	}
+
+	public function isFileExists(){
+		$path = Yii::getPathOfAlias($this->path).DIRECTORY_SEPARATOR.$this->apartment_id.DIRECTORY_SEPARATOR.$this->video_file;
+		return file_exists($path);
+	}
+
+	public function getFileUrl(){
+		return Yii::app()->getBaseUrl().'/'.$this->url.'/'.$this->apartment_id.'/'.$this->video_file;
+	}
 
 	function parseVideoEmbed($code) {
 		$code = str_replace("'", "\"", stripslashes($code));

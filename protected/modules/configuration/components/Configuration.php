@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************************************
-*	copyright			:	(c) 2013 Monoray
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 ***********************************************************************************************/
@@ -12,7 +12,7 @@ class Configuration extends CComponent {
 
 	public function init(){
 		$this->cachingTime = param('cachingTime', 5184000); // default caching for 60 days
-		if (file_exists(ALREADY_INSTALL_FILE)) {
+		if (oreInstall::isInstalled()) {
 			$this->loadConfig();
 		}
 	}

@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -19,11 +19,24 @@
 class Menu extends ParentModel{
 	public $title;
 
+	const LINK_NONE = 0;
 	const LINK_NEW_MANUAL = 1;
-	const LINK_NEW_AUTO = 2;
-	const LINK_DROPDOWN = 3;
-	const LINK_DROPDOWN_MANUAL = 4;
-	const LINK_DROPDOWN_AUTO = 5;
+	const LINK_NEW_INFO = 2;
+	const MAX_LEVEL = 3;
+
+	const MAIN_PAGE_ID = 1;
+	const NEWS_ID = 2;
+	const SPECIALOFFERS_ID = 3;
+	const ARTICLES_ID = 4;
+	const SITEMAP_ID = 5;
+	const REVIEWS_ID = 6;
+	const USERS_LIST_ID = 9;
+
+	public $maxNumberInBranch;
+	public $isSelected = false;
+
+	private static $_menuItemsFrontend;
+	private static $_menuItemsBackend;
 
 	public static function model($className=__CLASS__){
 		return parent::model($className);
@@ -33,133 +46,48 @@ class Menu extends ParentModel{
 		return '{{menu}}';
 	}
 
-	public static function getMenuItems(){
-        $sql = 'SELECT id, type, title_'.Yii::app()->language.' AS title, page_title_'.Yii::app()->language.' AS page_title, widget, subitems, href, special
-                FROM {{menu}}
-                WHERE active = 1
-                ORDER BY sorter';
+	public function scopes() {
+		return array(
+			'active'=>array(
+				'condition'=>'t.active=1',
+			),
+			'root'=>array(
+				'condition'=>'t.parentId=0',
+			),
+		);
+	}
 
-        // TODO: Сделать мультиязычный кеш
-		// $menu = Yii::app()->cache->get('menu');
-        $menu = false;
-
-		if($menu === false){
-			$menuItems = Yii::app()->db->createCommand($sql)->queryAll();
-
-			foreach($menuItems as $item){
-				if($item['special']){
-					$item['href'] = array($item['href']);
-				}
-
-				if($item['type'] == self::LINK_NEW_MANUAL){
-					$menu[] = array(
-						'label' => $item['title'],
-						'url' => $item['href'],
-					);
-				}
-				if($item['type'] == self::LINK_NEW_AUTO){
-					$menu[] = array(
-						'label' => $item['title'],
-						'url' => self::getUrlById($item['id']),
-					);
-				}
-
-				if($item['type'] == self::LINK_DROPDOWN){
-					$subitems = array();
-					foreach($menuItems as $tmpItem){
-						if($tmpItem['subitems'] == $item['id']){
-							if($tmpItem['type'] == self::LINK_DROPDOWN_MANUAL){
-								if($tmpItem['special']){
-									$tmpItem['href'] = array($tmpItem['href']);
-								}
-								$subitem = array(
-									'label' => $tmpItem['title'],
-									'url' => $tmpItem['href'],
-								);
-
-								$subitems[] = $subitem;
-							}
-							if($tmpItem['type'] == self::LINK_DROPDOWN_AUTO){
-								$subitem = array(
-									'label' => $tmpItem['title'],
-									'url' => self::getUrlById($tmpItem['id']),
-								);
-
-								$subitems[] = $subitem;
-							}
-						}
-					}
-					if($subitems){
-						$menu[] = array(
-							'label' => $item['title'],
-							'submenuOptions'=>array(
-								'class'=>'sub_menu_dropdown'
-							),
-							'url'=>array(''),
-							'linkOptions'=>array('onclick'=>'return false;'),
-							'items' => $subitems,
-						);
-
-
-					}
-				}
-
-			}
-			//Yii::app()->cache->set('menu', $menu);
-		}
-		if(!$menu){
-			return array();
-		}
-
-		return $menu;
+	public function relations(){
+		return array(
+			'activeChilds' => array(self::HAS_MANY, 'Menu', 'parentId', 'condition'=>'active = 1'),
+			'childs' => array(self::HAS_MANY, 'Menu', 'parentId'),
+			'parent' => array(self::BELONGS_TO, 'Menu', 'parentId'),
+			'page' => array(self::BELONGS_TO, 'InfoPages', 'pageId'),
+		);
 	}
 
 	public function rules(){
 		return array(
 			array('type', 'required'),
-
-			array('href, subitems', 'required', 'on' => 'insert, update'),
-			array('title', 'i18nRequired', 'on' => 'insert, update'),
-			array('href', 'required', 'on' => 'link_'.self::LINK_NEW_MANUAL),
-			array('title', 'i18nRequired', 'on' => 'link_'.self::LINK_NEW_MANUAL),
-			array('href, subitems', 'required', 'on' => 'link_'.self::LINK_DROPDOWN_MANUAL),
-			array('title', 'i18nRequired', 'on' => 'link_'.self::LINK_DROPDOWN),
-			array('title', 'i18nRequired', 'on' => 'link_'.self::LINK_DROPDOWN_MANUAL),
+			array('title', 'i18nRequired', 'on' => 'insert'),
 			array('title', 'i18nRequired', 'on' => 'special'),
-			array('widget', 'safe'),
+			array('title', 'i18nRequired', 'on' => 'link_'.self::LINK_NONE),
+			array('title, href', 'i18nRequired', 'on' => 'link_'.self::LINK_NEW_MANUAL),
+			array('pageId', 'required', 'on' => 'link_'.self::LINK_NEW_INFO),
+			array('number, active, pageId', 'numerical', 'integerOnly'=>true),
+			//array('href', 'length', 'max' => 255),
+			array('title, href', 'i18nLength', 'max' => 255),
+			array('parentId, pageId', 'length', 'max' => 11),
+			array('is_blank', 'boolean'),
 			array($this->getI18nFieldSafe(), 'safe'),
-
-			/*array('name_ru', 'length', 'max'=>255),
-			array('id, name_ru, date_updated', 'safe', 'on'=>'search'),
-			array('class, coords', 'safe'),*/
+			array('id, parentId, number, active', 'safe', 'on'=>'search'),
 		);
 	}
 
-    public function i18nFields(){
-        return array(
-            'title' => 'varchar(255) not null',
-            'page_title' => 'varchar(255) not null',
-            'page_body' => 'text not null'
-        );
-    }
-
-	public function seoFields() {
+	public function i18nFields(){
 		return array(
-			'fieldTitle' => 'page_title',
-			'fieldDescription' => 'page_body'
-		);
-	}
-
-    public function getPage_title(){
-        return $this->getStrByLang('page_title');
-    }
-
-    public function getPage_body(){
-        return $this->getStrByLang('page_body');
-    }
-
-	public function relations(){
-		return array(
+			'title' => 'varchar(255) not null',
+			'href' => 'varchar(255) not null'
 		);
 	}
 
@@ -169,10 +97,10 @@ class Menu extends ParentModel{
 			'active' => tc('Status'),
 			'type' => tt('Type of link'),
 			'href' => tt('Link'),
-			'subitems' => tt('The drop-down list to contain'),
-			'page_title' => tt('Page Title'),
-			'page_body' => tt('The text on the page'),
-			'widget' => tt('Display the bottom of the page'),
+			'parentId' => tt('Parent element'),
+			'number' => tt('Position'),
+			'pageId' => tt('pageId'),
+			'is_blank' => tt('is_blank'),
 		);
 	}
 
@@ -184,6 +112,269 @@ class Menu extends ParentModel{
 				'updateAttribute' => 'date_updated',
 			),
 		);
+	}
+
+	//Построение дерева страниц для администратора
+	public static function buildTreePages($renew = false){
+		if ($renew || !self::$_menuItemsBackend) {
+			$result = self::model()->findAll(array('order'=>'t.number'));
+			if(!count($result)) return array();
+
+			foreach ($result as $item) {
+				self::$_menuItemsBackend[$item->id] = array(
+					'id' => $item->id,
+					'parentId' => $item->parentId,
+					'number' => $item->number,
+					'pageId' => $item->pageId,
+					'is_blank' => $item->is_blank,
+					'title' => CHtml::decode($item->getTitle()),
+					'href' => $item->getHref(),
+					'url' => $item->getUrl(),
+					'active' => $item->active,
+					'type' => $item->type,
+					'special' => $item->special,
+				);
+			}
+		}
+
+		return self::normalizeTreePages(self::$_menuItemsBackend, 0);
+	}
+
+	public static function normalizeTreePages(&$data, $depth = 0, $rootId = 0) {
+		$treePages= array();
+		foreach ($data as $id => $node) {
+			$node['parentId'] = $node['parentId'] === null ? 0 : $node['parentId'];
+			if ($node['parentId'] == $rootId) {
+				unset($data[$id]);
+
+				$children = self::normalizeTreePages($data, $depth+1, $node['id']);
+				$treePages[] = array(
+					'id' => $node['id'],
+					'attr' => array(
+						'pid' => $node['id'],
+						'class' => $node['active'] ? 'jstree-checked' : '',
+						'special' => $node['special'],
+						'level' => $depth + 1,
+					),
+					'data' => $node['title'],
+					'state' => count($children) ? 'open' : null,
+					'children' => $children,
+				);
+			}
+		}
+		return $treePages;
+	}
+
+	public function normalize(){
+		$pages=self::model()->findAll(array(
+			'condition'=>'parentId=:parentId AND number>=:number AND id!=:id',
+			'params'=>array(
+				'id'=>$this->id,
+				'parentId'=>$this->parentId,
+				'number'=>$this->number,
+			),
+		));
+		$num=$this->number;
+		foreach($pages as $page){
+			if($num==$page->number){
+				$page->number++;
+				$page->update();
+			}else
+				break;
+			++$num;
+		}
+	}
+
+	public function plainErrors(){
+		$item_errors = $this->getErrors();
+		$errors=array();
+		foreach($item_errors as $item_error){
+			$errors[]=join(', ',$item_error);
+		}
+		return join("<br />",$errors);
+	}
+
+	#######################################################################
+	// действия с элементами
+	#######################################################################
+
+	public function setVisible($active){
+		$this->active = $active;
+		if(!$this->update())
+			throw new CHttpException(400,$this->plainErrors());
+	}
+
+	public function rename($newTitle){
+		if(isFree())
+			$activeLangs = array(Yii::app()->language);
+		else
+			$activeLangs = Lang::getActiveLangs();
+
+		foreach($activeLangs as $lang){
+			$this->{'title_'.$lang} = CHtml::encode($newTitle);
+		}
+
+		if(!$this->update())
+			throw new CHttpException(400,$this->plainErrors());
+	}
+
+	public function move($ref,$pos){
+		$refPage=self::model()->findByPk($ref);
+		if($refPage===null && !($ref==0 && $pos=='last'))
+			throw404();
+
+		// нельзя перемещать в "специальный" элемент (ссылка на компонент CMS)
+		if ($pos == 'last' && $refPage->special == 1)
+			throw new CHttpException(403, tt('Move around menu items is not allowed'));
+
+		switch($pos){
+			case 'before':
+				$this->parentId=$refPage->parentId;
+				$this->number=$refPage->number;
+				break;
+			case 'after':
+				$this->parentId=$refPage->parentId;
+				$this->number=$refPage->number+1;
+				break;
+			case 'last':
+				$this->parentId=$ref==0?0:$refPage->id;
+				$this->number=self::model()->find(array(
+						'select'=>'MAX(number) as maxNumberInBranch',
+						'condition'=>'parentId=:parentId',
+						'params'=>array(
+							'parentId'=>$this->parentId
+						)
+					))->maxNumberInBranch+1;
+				break;
+			default:
+				throw new CHttpException(400, tt('Command not found'));
+		}
+		if(!$this->update())
+			throw new CHttpException(400,$this->plainErrors());
+
+		$this->normalize();
+	}
+
+	public function deleteBranch(){
+		if(!$this->delete())
+			throw new CHttpException(400,$this->plainErrors());
+
+		$subPages = self::model()->findAll("parentId=".$this->id);
+		foreach($subPages as $subPage)
+			$subPage->deleteBranch();
+	}
+
+
+	public static function create($attributes){
+		$item = new Menu;
+		//$item->attributes = $attributes;
+		$item->parentId = array_key_exists('parentId', $attributes) ? $attributes['parentId'] : null;
+		$item->number = array_key_exists('number', $attributes) ? $attributes['number'] : null;
+		$item->active = 0;
+		$item->type = self::LINK_NONE;
+
+		if(isFree())
+			$activeLangs = array(Yii::app()->language);
+		else
+			$activeLangs = Lang::getActiveLangs();
+
+		foreach($activeLangs as $lang){
+			//$tmp = 'title_'.Yii::app()->language;
+			$item->{'title_'.$lang} = array_key_exists('title', $attributes) ? $attributes['title'] : null;
+		}
+
+		/*// подставляем урл, если не задан вручную
+		if (!$item->seo_link && $item->title) {
+			if (isset($item->parent) && $item->parent) { # есть родитель
+				if (isset($item->parent->seo_link) && $item->parent->seo_link) {
+					$item->seo_link = $item->parent->seo_link.'/'.translit(mb_strtolower($item->title, 'utf8'));
+				}
+				elseif (isset($item->parent->title) && $item->parent->title) {
+					$item->seo_link = translit(mb_strtolower($item->parent->title, 'utf8')).'/'.translit(mb_strtolower($item->title, 'utf8'));
+				}
+			}
+		}*/
+
+		if(!$item->save())
+			throw new CHttpException(400, $item->plainErrors());
+
+		$item->normalize();
+
+		return $item;
+	}
+
+
+	####################################################
+	//Построение дерева страниц для пользователей
+	public static function getMenuItems($renew = false){
+		if ($renew || !self::$_menuItemsFrontend) {
+			$result = self::model()->findAll(array(
+				'condition'=>"active = :active",
+				'params'=>array(
+					'active' => 1,
+				),
+				'order'=>'t.number'
+			));
+			if(!count($result)) return array();
+
+			foreach ($result as $item) {
+				self::$_menuItemsFrontend[$item->id] = array(
+					'id' => $item->id,
+					'parentId' => $item->parentId,
+					'number' => $item->number,
+					'pageId' => $item->pageId,
+					'is_blank' => $item->is_blank,
+					'title' => CHtml::decode($item->getTitle()),
+					'href' => $item->getHref(),
+					'url' => $item->getUrl(),
+					'active' => $item->active,
+					'type' => $item->type,
+					'special' => $item->special,
+				);
+			}
+		}
+
+		return self::normalizeMenuItems(self::$_menuItemsFrontend, 0);
+	}
+
+	public static function normalizeMenuItems(&$data, $depth = 0, $rootId = 0) {
+		$menu= array();
+		$i = 0;
+		foreach ($data as $id => $node) {
+			$node['parentId'] = $node['parentId'] === null ? 0 : $node['parentId'];
+			if ($node['parentId'] == $rootId) {
+				unset($data[$id]);
+
+				$children = self::normalizeMenuItems($data, $depth+1, $node['id']);
+				$menu[$i] = array(
+					'label' => $node['title'],
+					'url' => $node['url']
+				);
+
+				if ($node['is_blank'] && $node['type'] == self::LINK_NEW_MANUAL)
+					$menu[$i]['linkOptions'] = array('target' => '_blank');
+				if ($children)
+					$menu[$i]['items'] = $children;
+
+				$i++;
+			}
+		}
+		return $menu;
+	}
+
+
+	public function getItemLevel() {
+		$level = 1;
+		if ($this->parentId == 0)
+			return $level;
+
+		if (isset($this->parent) && $this->parent)
+			$level++;
+
+		if (isset($this->parent->parent) && $this->parent->parent)
+			$level++;
+
+		return $level;
 	}
 
 	public function search(){
@@ -199,147 +390,57 @@ class Menu extends ParentModel{
 			'pagination'=>array(
 				'pageSize'=>param('adminPaginationPageSize', 20),
 			),
-			'sort'=>array(
+			/*'sort'=>array(
 				'defaultOrder'=>'sorter',
-			)
-		));
-	}
-
-	public function searchSubitems(){
-		$criteria = new CDbCriteria;
-		$criteria->compare('subitems', $this->id);
-		return new CActiveDataProvider($this, array(
-			'criteria'=>$criteria,
-			'pagination'=>array(
-				'pageSize'=>param('adminPaginationPageSize', 20),
-			),
-			'sort'=>array(
-				'defaultOrder'=>'sorter',
-			)
+			)*/
 		));
 	}
 
 	public function getTypes(){
 		return array(
+			self::LINK_NONE => tt('Nothing'),
 			self::LINK_NEW_MANUAL => tt('Simple link (set manually)'),
-			self::LINK_NEW_AUTO => tt('A page with text'),
-			self::LINK_DROPDOWN => tt('The drop-down list'),
-			self::LINK_DROPDOWN_MANUAL => tt('Reference in the drop-down list (set manually)'),
-			self::LINK_DROPDOWN_AUTO => tt('The page with the text in the drop-down list'),
+			self::LINK_NEW_INFO => tt('Info pages'),
 		);
 	}
 
-	public function getForSubitems(){
-		$sql = 'SELECT id, title_'.Yii::app()->language.' AS title
-		        FROM {{menu}}
-		        WHERE type="'.self::LINK_DROPDOWN.'" AND active';
-
-		$return = CHtml::listData(Yii::app()->db->createCommand($sql)->queryAll(), 'id', 'title');
-
-		if($this->special){
-			return CMap::mergeArray(array('0' => tt('Not selected')), $return);
-		} else {
-			return $return;
-		}
-	}
-
 	public function beforeSave(){
-		if($this->isNewRecord){
-			$this->active = 1;
-
-			$maxSorter = Yii::app()->db->createCommand()
-				->select('MAX(sorter) as maxSorter')
-				->from('{{menu}}')
-				->queryRow();
-			$this->sorter = $maxSorter['maxSorter']+1;
-		}
-		Yii::app()->cache->delete('menu');
-
-		if($this->special){
-			if($this->subitems){
-				$this->type = self::LINK_DROPDOWN_MANUAL;
-			} else {
-				$this->type = self::LINK_NEW_MANUAL;
-			}
-		}
-
 		return parent::beforeSave();
 	}
 
 	public function beforeDelete(){
-		$sql = 'UPDATE {{menu}} SET subitems=0 WHERE subitems=:subitems';
-		Yii::app()->db->createCommand($sql)->execute(array(':subitems' => $this->id));
-
-		if(issetModule('seo') && param('genFirendlyUrl')){
-			$sql = 'DELETE FROM {{seo_friendly_url}} WHERE model_id="'.$this->id.'" AND model_name = "Menu"';
-			Yii::app()->db->createCommand($sql)->execute();
-		}
-
 		return parent::beforeDelete();
 	}
 
 	public function getUrl(){
-		return self::getUrlById($this->id);
-	}
+		$url = 'javascript: void(0);'; // type self::LINK_NONE;
 
-	public static function getUrlById($id) {
-		if(issetModule('seo') && param('genFirendlyUrl')){
-			$seo = SeoFriendlyUrl::getForUrl($id, 'Menu');
+		if ($this->special == 1)  {
+			$url = array($this->href);
+		}
+		else {
+			if ($this->type == self::LINK_NEW_MANUAL)
+				$url = str_replace('{baseUrl}', Yii::app()->baseUrl, $this->href);
 
-			if($seo){
-				$field = 'url_'.Yii::app()->language;
-				return Yii::app()->createAbsoluteUrl('/menumanager/main/view', array(
-					'url' => $seo->$field . ( param('urlExtension') ? '.html' : '' ),
-				));
+			if ($this->type == self::LINK_NEW_INFO) {
+				if (isset($this->page) && $this->page) {
+					$url = $this->page->getUrl();
+				}
+				else {
+					$url = array('/menumanager/main/view', 'id'=>$this->id);
+				}
 			}
 		}
 
-		return Yii::app()->createAbsoluteUrl('/menumanager/main/view', array(
-			'id'=>$id,
-		));
+		return $url;
+	}
+
+	public function getHref(){
+		return $this->getStrByLang('href');
 	}
 
 	public function getTitle(){
-		$return = CHtml::encode($this->getStrByLang('title'));
-		if(Yii::app()->user && Yii::app()->user->getState('isAdmin')){
-			$href = array();
-			switch ($this->id) {
-				case 2:
-					$href = array('/news/backend/main/admin');
-					break;
-				case 4:
-					$href = array('/articles/backend/main/admin');
-					break;
-			}
-			if($href){
-				$return .= ' ['.CHtml::link(tt('Management section'), $href).']';
-			}
-		}
-
-		if($this->type == self::LINK_DROPDOWN){
-			if(!self::model()->countByAttributes(array('subitems' => $this->id))){
-				$return .= '<br/> - '.tt('in this paragraph is not nested. The menu item will not be displayed.');
-			}
-		}
-
-		return $return;
-	}
-
-	public static function getWidgetOptions(){
-		$arrWidgets =  array(
-			'' => tc('No'),
-			'news' => tc('News'),
-			'apartments' => tc('Listing'),
-			'viewallonmap' => tc('Search for listings on the map'),
-			'contactform' => tc('The form of the section "Contact Us"'),
-			'randomapartments' => tc('Listing (random)'),
-			'specialoffers' => tc('Special offers'),
-		);
-
-        if (issetModule('metrosearch')) {
-            $arrWidgets['metrosearch'] = Yii::t('common', 'Search on map by metro station');
-        }
-        return $arrWidgets;
+		return CHtml::encode($this->getStrByLang('title'));
 	}
 
 	public static function getRel($id, $lang){
@@ -350,14 +451,4 @@ class Menu extends ParentModel{
 
 		return $model;
 	}
-
-	public function afterSave() {
-		if($this->type == 2){
-			if(issetModule('seo') && param('genFirendlyUrl')){
-				SeoFriendlyUrl::getAndCreateForModel($this);
-			}
-		}
-		return parent::afterSave();
-	}
-
 }

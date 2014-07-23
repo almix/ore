@@ -79,13 +79,13 @@ Author URI: http://dev7studios.com
 }
 
 .theme-orman .nivo-caption {
-    font-family: Helvetica, Arial, sans-serif;
+    font-family: 'Roboto', Arial, sans-serif;
 }
-.theme-orman .nivo-caption a { 
+.theme-orman .nivo-caption a {
     color:#fff;
     border-bottom:1px dotted #fff;
 }
-.theme-orman .nivo-caption a:hover { 
+.theme-orman .nivo-caption a:hover {
     color:#fff;
 }
 

@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -21,11 +21,11 @@ class CustomGMap {
 	private static $jsVars;
 	private static $jsCode;
 
-	public static function createMap(){
+	public static function createMap($isAppartment = false){
 
 		self::$jsVars = '
-
 		var mapGMap;
+		var fenWayPanorama;
 
 		var markersGMap = [];
 		var markersForClasterGMap = [];
@@ -41,7 +41,7 @@ class CustomGMap {
 		var centerMapGMap = new google.maps.LatLng('.param('module_apartments_gmapsCenterY', 55.75411314653655).', '.param('module_apartments_gmapsCenterX', 37.620717508911184).');
 
         mapGMap = new google.maps.Map(document.getElementById("googleMap"), {
-            zoom: '.param('module_apartments_gmapsZoomCity', 11).',
+            zoom: '. ($isAppartment ? param('module_apartments_gmapsZoomApartment', 15) : param('module_apartments_gmapsZoomCity', 11)) .',
             center: centerMapGMap,
             mapTypeId: google.maps.MapTypeId.ROADMAP
         });
@@ -109,20 +109,23 @@ class CustomGMap {
 	public static function render(){
 		echo CHtml::tag('div', array('id' => 'googleMap', 'style' => 'width: 100%; height: 586px;'), '', true);
 
-		echo CHtml::script(self::$jsVars);
+        $js1 = 'https://maps.google.com/maps/api/js?v=3.5&sensor=false&callback=initGmap&language='.Yii::app()->language;
+        $js2 = 'http://google-maps-utility-library-v3.googlecode.com/svn/trunk/markerclusterer/src/markerclusterer.js';
 
-		Yii::app()->clientScript->registerScript('GMap', self::$jsCode, CClientScript::POS_READY);
+        self::$jsVars .= "\n loadScript('$js1', true);\n loadScript('$js2', true);\n";
+
+        //echo CHtml::script(self::$jsVars);
+        echo CHtml::script(PHP_EOL . self::$jsVars . PHP_EOL . 'function initGmap() { ' . self::$jsCode . ' }');
 	}
 
 
-	public static function actionGmap($id, $model, $inMarker){
+	public static function actionGmap($id, $model, $inMarker, $withPanorama = false){
 
 		$isOwner = self::isOwner($model);
 
 		// If we have already created marker - show it
-
 		if ($model->lat && $model->lng) {
-			self::createMap();
+			self::createMap(true);
 			self::$jsCode .= '
 				mapGMap.setCenter(new google.maps.LatLng('.$model->lat.', '.$model->lng.'));
 			';
@@ -170,6 +173,25 @@ class CustomGMap {
 			self::actionGmap($id, $model, $inMarker);
 			return false;
 		}
+
+        if($withPanorama){
+            self::$jsCode .= '
+
+                    var fenWayPanorama = new google.maps.LatLng('.$model->lat.', '.$model->lng.');
+
+					if (($("#gmap-panorama").length > 0)) {
+						var streetViewService = new google.maps.StreetViewService();
+						streetViewService.getPanoramaByLocation(fenWayPanorama, 30, function (streetViewPanoramaData, status) {
+							if (status === google.maps.StreetViewStatus.OK) {
+								$("#gmap-panorama").show().css("visibility", "visible");
+								google.maps.event.addDomListener(window, "load", initializeGmapPanorama);
+							} else {
+								$("#gmap-panorama").hide().css("visibility", "hidden");
+							}
+						});
+					}
+            ';
+        }
 
 		self::render();
 	}

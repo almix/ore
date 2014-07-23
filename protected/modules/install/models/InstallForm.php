@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -47,13 +47,16 @@ class InstallForm extends CFormModel {
 
 	public function rules()	{
 		return array(
-			array('dbUser, dbHost, dbName, adminPass, adminEmail, adminName', 'required'),
+			array('dbUser, dbHost, dbName, adminPass, adminEmail, adminName, dbPrefix', 'required'),
 			array('agreeLicense', 'required', 'requiredValue' => true, 'message'=> tFile::getT('module_install', 'You should agree with "The license agreement"')),
 			array('adminEmail', 'email'),
 			array('dbUser, dbPass, dbName', 'length', 'max' => 30),
 			array('dbHost', 'length', 'max' => 50),
 			array('adminPass', 'length', 'max' => 20, 'min' => 6),
             array('dbPort', 'length', 'max' => 5),
+			array('dbPort', 'numerical', 'allowEmpty' => true, 'integerOnly' => true),
+			array('dbPrefix', 'length', 'max' => 7, 'min' => 1),
+			array('dbPrefix', 'match', 'pattern' => '#^[a-zA-Z0-9_]{1,7}$#', 'message'=> tFile::getT('module_install', 'It is allowed to use the characters "a-zA-Z0-9_" without spaces')),
 			array('dbPrefix, dbPort', 'safe'),
 			array('language', 'in' ,'range' => array('en', 'ru', 'de'), 'allowEmpty' => false),
 		);

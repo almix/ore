@@ -2,10 +2,14 @@
 
 <?php
 $this->pageTitle .= ' - '.tt('Update apartment', 'apartments');
+$this->breadcrumbs = array(
+	Yii::t('common', 'Control panel') => array('/usercpanel/main/index'),
+	tt('Update apartment', 'apartments')
+);
 
 if(!Yii::app()->user->isGuest){
     $menuItems = array(
-    		array('label' => tt('Manage apartments', 'apartments'), 'url'=>array('index')),
+    		array('label' => tt('Manage apartments', 'apartments'), 'url'=>array('/usercpanel/main/index')),
     		array('label' => tt('Add apartment', 'apartments'), 'url'=>array('create')),
     		array(
     			'label' => tt('Delete apartment', 'apartments'),
@@ -32,7 +36,7 @@ if(issetModule('paidservices')){
 }
 
 
-$this->widget('zii.widgets.CMenu', array(
+$this->widget('CustomMenu', array(
 	'items' => $menuItems
 ));
 
@@ -47,7 +51,6 @@ if(isset($show) && $show){
 //$model->metroStations = $model->getMetroStations();
 $this->renderPartial('_form',array(
 	'model'=>$model,
-	'categories' => $categories,
 	'supportvideoext' => $supportvideoext,
 	'supportvideomaxsize' => $supportvideomaxsize,
 ));

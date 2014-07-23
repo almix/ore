@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -27,7 +27,13 @@ class ModuleUserController extends Controller{
 	private $_model;
 	public $modelName;
 
+    public $newFields;
+
+
 	public function getViewPath($checkTheme=false){
+		if($checkTheme && ($theme=Yii::app()->getTheme())!==null){
+			return $theme->getViewPath().DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR.$this->getModule($this->id)->getName();
+		}
 		return Yii::getPathOfAlias('application.modules.'.$this->getModule($this->id)->getName().'.views');
 	}
 
@@ -56,6 +62,9 @@ class ModuleUserController extends Controller{
 	public function filters(){
 		return array(
 			'accessControl', // perform access control for CRUD operations
+			array(
+				'ESetReturnUrlFilter + index, view, create, update, bookingform, complain, mainform, add, edit',
+			),
 		);
 	}
 

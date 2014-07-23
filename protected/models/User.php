@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -17,12 +17,35 @@
 ***********************************************************************************************/
 
 class User extends ParentModel {
+
+    const TYPE_PRIVATE_PERSON = 1;
+    const TYPE_AGENCY = 2;
+    const TYPE_AGENT = 3;
+    const TYPE_ADMIN = 42;
+
+    const AVA_PREFIX = 'ava_';
+
+    const AGENT_STATUS_AWAIT_VERIFY = 0;
+    const AGENT_STATUS_CONFIRMED = 1;
+
 	private static $_saltAddon = 'openre';
 	public $password_repeat;
 	public $old_password;
 	public $verifyCode;
 	public $activateLink;
 	public $recoverPasswordLink;
+
+    public static function getAgentStatusList(){
+        return array(
+            self::AGENT_STATUS_AWAIT_VERIFY => tt('Waiting for acknowledge', 'users'),
+            self::AGENT_STATUS_CONFIRMED => tt('Confirmed', 'users'),
+        );
+    }
+
+    public function getAgentStatusName(){
+        $list = self::getAgentStatusList();
+        return isset($list[$this->agent_status]) ? $list[$this->agent_status] : '';
+    }
 
 	public static function model($className=__CLASS__) {
 		return parent::model($className);
@@ -32,17 +55,41 @@ class User extends ParentModel {
 		return '{{users}}';
 	}
 
+	public function behaviors(){
+		return array(
+			'AutoTimestampBehavior' => array(
+				'class' => 'zii.behaviors.CTimestampBehavior',
+				'createAttribute' => 'date_created',
+				'updateAttribute' => 'date_updated',
+			),
+		);
+	}
+
     public function relations() {
         $relation = array();
         if(issetModule('payment')){
             $relation['payments'] = array(self::HAS_MANY, 'Payments', 'user_id', 'order'=>'payments.date_created DESC');
         }
+        $relation['countAdRel'] = array(self::STAT, 'Apartment', 'owner_id', 'condition' => 'active = 1 AND owner_active = 1');
         return $relation;
+    }
+
+    public function getCountAd(){
+        if($this->type != User::TYPE_AGENCY){
+            return (int) $this->countAdRel;
+        }
+        $sql = "SELECT id FROM {{users}} WHERE agency_user_id = :user_id AND agent_status=:status";
+        $agentsId = Yii::app()->db->createCommand($sql)->queryColumn(array(':user_id' => $this->id, ':status' => User::AGENT_STATUS_CONFIRMED));
+        if(!$agentsId){
+            return (int) $this->countAdRel;
+        }
+        $sql = "SELECT count(id) FROM {{apartment}} WHERE active = 1 AND owner_active = 1 AND (owner_id = :user_id OR owner_id IN (".implode(',', $agentsId)."))";
+        return (int) Yii::app()->db->createCommand($sql)->queryScalar(array(':user_id' => $this->id));
     }
 
 	public function rules() {
 		return array(
-			array('username, password, salt, email, temprecoverpassword', 'length', 'max' => 128),
+			array('username, password, salt, email, temprecoverpassword, agency_name, ava', 'length', 'max' => 128),
 			array('phone', 'length', 'max' => 15),
 			array('email, phone, username', 'required', 'on' => 'usercpanel'),
 			array($this->i18nRules('additional_info'), 'safe', 'on' => 'usercpanel'),
@@ -64,13 +111,33 @@ class User extends ParentModel {
 			array('email', 'unique'),
 
 			array('old_password', 'required', 'on' => 'changeAdminPass'),
-			array('balance', 'numerical', 'integerOnly' => true),
+			array('balance, type, agency_user_id', 'numerical', 'integerOnly' => true),
+
+            array('agency_name', 'checkCompanyName'),
 
 			array('username, email, verifyCode, phone', 'required', 'on' => 'register'),
 			array('verifyCode', 'captcha', 'on' => 'register'),
-			array('active', 'safe'),
+			array('active, activatekey, agency_user_id, agent_status', 'safe'),
 		);
 	}
+
+    public function checkCompanyName(){
+        if($this->type == self::TYPE_AGENCY){
+            if(!$this->agency_name){
+                $this->addError('agency_name', tc('Enter agency name'));
+            }
+
+            $addWhere = '';
+            if($this->id){
+                $addWhere = ' AND id != ' . (int) $this->id;
+            }
+
+            $exist = Yii::app()->db->createCommand("SELECT id FROM {{users}} WHERE agency_name=:name" . $addWhere)->queryScalar(array(':name' => $this->agency_name));
+            if($exist){
+                $this->addError('agency_name', tc('The Agency with the same name already registered'));
+            }
+        }
+    }
 
 	public function i18nFields(){
         return array(
@@ -94,7 +161,10 @@ class User extends ParentModel {
 			'Login (email)' => Yii::t('common', 'Login (email)'),
 			'verifyCode' => Yii::t('common', 'Verify Code'),
 			'additional_info' => tt('Additional info', 'usercpanel'),
-			'balance' => tc('balance')
+			'balance' => tc('balance'),
+			'type' => tc('Type'),
+			'agency_name' => tc('Agency name'),
+			'agency_user_id' => tc('Agency name'),
 		);
 		if($this->scenario == 'changePass' || $this->scenario == 'changeAdminPass'){
 			$return['password'] = tt('Enter new password', 'usercpanel');
@@ -111,6 +181,13 @@ class User extends ParentModel {
 
 		return $return;
 	}
+
+    public function scopes(){
+        return array(
+            'active' => array('condition' => $this->getTableAlias().'.active = 1'),
+            'myAgents' => array('condition' => $this->getTableAlias().'.agency_user_id = ' . Yii::app()->user->id),
+        );
+    }
 
 	/**
 	 * Checks if the given password is correct.
@@ -176,6 +253,7 @@ class User extends ParentModel {
 		$criteria->compare('username',$this->username,true);
 		$criteria->compare('email',$this->email,true);
         $criteria->compare('phone',$this->phone,true);
+        $criteria->compare($this->getTableAlias().'.type',$this->type);
 
 		if ($this->active != 'all')
 		    $criteria->compare('active', $this->active);
@@ -186,11 +264,11 @@ class User extends ParentModel {
 	}
 
 	public function afterDelete(){
-		// need to save rating
-		//$sql = 'DELETE FROM {{apartment_comments}} WHERE email="'.$this->email.'"';
-		//Yii::app()->db->createCommand($sql)->execute();
 
 		$sql = 'DELETE FROM {{users_social}} WHERE user_id="'.$this->id.'"';
+		Yii::app()->db->createCommand($sql)->execute();
+
+		$sql = 'DELETE FROM {{comments}} WHERE owner_id="'.$this->id.'"';
 		Yii::app()->db->createCommand($sql)->execute();
 
 		$sql = 'UPDATE {{apartment}} SET owner_id=1, owner_active=:active, active=:inactive WHERE owner_id=:userId';
@@ -199,6 +277,13 @@ class User extends ParentModel {
 			':inactive' => Apartment::STATUS_INACTIVE,
 			':userId' => $this->id,
 		));
+
+		if (issetModule('comparisonList')) {
+			$sql = 'DELETE FROM {{comparison_list}} WHERE user_id="'.$this->id.'"';
+			Yii::app()->db->createCommand($sql)->execute();
+		}
+
+		self::destroyUserSession($this->id);
 
 		return parent::afterDelete();
 	}
@@ -210,6 +295,8 @@ class User extends ParentModel {
 //				$this->$additionalInfo = nl2br($this->$additionalInfo);
 //			}
 //		}
+        $this->type = ( $this->type && in_array($this->type, self::getTypeList('key')) ) ? $this->type : User::TYPE_PRIVATE_PERSON;
+
 		return parent::beforeSave();
 	}
 
@@ -265,8 +352,16 @@ class User extends ParentModel {
 	public static function getModeListShow(){
 
 		$modeInState = Yii::app()->user->getState('mode_list_show');
+		$settingsMode = param('mode_list_show', 'block');
 
-		$modeInState = $modeInState ? $modeInState : param('mode_list_show', 'block');
+		if ($modeInState == 'map' && !param('useGoogleMap', 0) && !param('useYandexMap', 0) && !param('useOSMMap', 0)) {
+			$modeInState = 'block';
+			Yii::app()->user->setState('mode_list_show', $modeInState);
+			ConfigurationModel::updateValue('mode_list_show', $modeInState);
+			Configuration::clearCache();
+		}
+
+		$modeInState = $modeInState ? $modeInState : $settingsMode;
 
 		$modeInGet = Yii::app()->request->getParam('ls', $modeInState);
 
@@ -298,4 +393,156 @@ class User extends ParentModel {
 
 		return false;
 	}
+
+	public static function updateUserSession() {
+		if (!Yii::app()->user->isGuest) {
+			$id = Yii::app()->user->id;
+			$sessionId = Yii::app()->session->sessionId;
+
+			if ($id && $sessionId) {
+				Yii::app()->db->createCommand()->update('{{users_sessions}}',array(
+					'user_id'=>$id
+				),'id=:sessionId',array(':sessionId'=>$sessionId));
+
+				/*# comparison list
+				if (issetModule('comparisonList')) {
+					Yii::app()->db->createCommand()->update('{{comparison_list}}',array(
+						'user_id'=>$id
+					),'session_id=:sessionId',array(':sessionId'=>$sessionId));
+				}*/
+			}
+		}
+	}
+
+	public static function destroyUserSession($userId = null) {
+		if (Yii::app()->user->getState("isAdmin")) {
+			if ($userId) {
+				Yii::app()->db->createCommand()->delete('{{users_sessions}}','user_id=:userId',array(':userId'=>$userId));
+			}
+		}
+	}
+
+
+	public static function createUser($attributes, $isSocAuth = false) {
+        $model = new User;
+        $model->attributes = $attributes;
+
+        $password = $model->randomString();
+        $model->setPassword($password);
+		
+		if ($isSocAuth)
+			$model->active = 1;
+
+        if ($model->save()) {
+            return array(
+                'id' => $model->id,
+                'email' => $model->email,
+                'username' => $model->username,
+                'password' => $password,
+                'active' => $model->active,
+                'activatekey' => $model->activatekey,
+                'activateLink' => Yii::app()->createAbsoluteUrl('/site/activation?key=' . $model->activatekey),
+                'userModel' => $model,
+            );
+        } else {
+			if ($isSocAuth) {
+				$errors = $model->getErrors();
+				if ($errors) {
+					foreach($errors as $error) {
+						if ($error && is_array($error)) {
+							foreach($error as $item) {
+								echo '<div class="alert alert-block alert-error fade in">'.$item.'</div>';
+							}
+						}
+					}
+				}
+				exit;
+			}
+			else
+            return false;
+        }
+    }
+
+    public static function generateActivateKey() {
+        return md5(uniqid());
+    }
+
+    public static function getTypeList($variant = 'list'){
+        $list = array(
+            self::TYPE_PRIVATE_PERSON => tc('Private person'),
+            self::TYPE_AGENCY => tc('Company'),
+            self::TYPE_AGENT => tc('Agent'),
+        );
+
+        switch($variant){
+            case 'key':
+                return array_keys($list);
+            break;
+
+            case 'full':
+                $list[self::TYPE_ADMIN] = tc('administrator');
+                break;
+
+            case 'withAll':
+                $list['all'] = tc('All');
+                break;
+
+            default:
+                return $list;
+        }
+
+        return $list;
+    }
+
+    public function getTypeName(){
+        $list = self::getTypeList('full');
+        return isset($list[$this->type]) ? $list[$this->type] : tc('not defined');
+    }
+
+    public function getUrl(){
+        return '#';
+    }
+
+    public function renderAva($linkToProfile = true, $sizeClass = ''){
+        echo '<div class="user-ava" id="user-ava-'.$this->id.'">';
+
+        echo '<div class="user-ava-crop">';
+
+        if($linkToProfile){
+            echo '<a href="'.$this->getUrl().'">';
+        }else{
+            echo '<a href="'.$this->getAvaSrc().'" rel="prettyPhoto">';
+        }
+
+        $avaUrl = $this->ava ? $this->getAvaSrcThumb() : Yii::app()->baseUrl . '/images/ava-default.jpg';
+
+        echo CHtml::image($avaUrl, $this->username, array('class' => 'message_ava '.$sizeClass));
+
+        echo '</a>';
+        echo '</div>';
+
+        //echo '<div class="user-ava-username">'.$this->type == User::TYPE_COMPANY ? $this->agency_name : $this->username.'</div>';
+
+        echo '</div>';
+    }
+
+    public function getAvaSrc() {
+        $url = HUser::getUploadUrl($this, HUser::UPLOAD_AVA);
+
+        return $url . '/' . $this->ava;
+    }
+
+    public function getAvaSrcThumb() {
+        $url = HUser::getUploadUrl($this, HUser::UPLOAD_AVA);
+
+        return $url . '/' . self::AVA_PREFIX . $this->ava;
+    }
+
+    public function getNameForType(){
+        return $this->type == User::TYPE_AGENCY ? $this->agency_name : $this->username;
+    }
+
+    public function getLinkToAllListings(){
+        return CHtml::link(tt('all_member_listings', 'apartments') . ' ('.$this->countAd.')', Yii::app()->createUrl('/apartments/main/alllistings', array('id' => $this->id)));
+    }
 }

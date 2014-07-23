@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -21,6 +21,9 @@ class NewsWidget extends CWidget {
 	public $usePagination = 1;
 
 	public function getViewPath($checkTheme=false){
+		if($checkTheme && ($theme=Yii::app()->getTheme())!==null){
+			return $theme->getViewPath().DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR.'news';
+		}
 		return Yii::getPathOfAlias('application.modules.news.views');
 	}
 

@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -18,6 +18,15 @@
 
 class MainController extends ModuleUserController{
 	public $modelName = 'Booking';
+
+	public function actions() {
+		return array(
+			'captcha' => array(
+				'class' => 'MathCCaptchaAction',
+				'backColor' => 0xFFFFFF,
+			),
+		);
+	}
 
 	public function actionBookingform($isFancy = 0){
 		Yii::app()->getModule('apartments');
@@ -34,20 +43,23 @@ class MainController extends ModuleUserController{
 			$booking->apartment_id = $apartment->id;
 
 			if($booking->validate()){
-				$booking->time_inVal = $this->getI18nTimeIn($booking->time_in);
-				$booking->time_outVal = $this->getI18nTimeOut($booking->time_out);
+                $booking->time_inVal = $this->getI18nTimeIn($booking->time_in);
+                $booking->time_outVal = $this->getI18nTimeOut($booking->time_out);
 
-				$notifier = new Notifier;
-
-				$ownerApartment = User::model()->findByPk($apartment->owner_id);
-				if (!$ownerApartment->isAdmin) {
-					// to owner
-					$notifier->raiseEvent('onNewBookingOwner', $booking, 0, $ownerApartment->email);
+				if (issetModule('bookingtable')) {
+					Bookingtable::addRecord($booking);
 				}
 
-				// to admin
+				$notifier = new Notifier();
+
+                $types = Apartment::getI18nTypesArray();
+                $booking->type = $types[Apartment::TYPE_RENT];
+
+				$ownerApartment = User::model()->findByPk($apartment->owner_id);
+
 				$booking->ownerEmail = $ownerApartment->email;
-				$notifier->raiseEvent('onNewBooking', $booking);
+
+				$notifier->raiseEvent('onNewBooking', $booking, array('user' => $ownerApartment));
 
 				Yii::app()->user->setFlash('success', tt('Operation successfully complete. Your order will be reviewed by owner.'));
 				$this->redirect($apartment->getUrl());
@@ -94,7 +106,12 @@ class MainController extends ModuleUserController{
 			}
 
 			if($model->validate()){
-				if (!$isForBuy) {
+                if($_POST['SimpleformModel']['type'] != Apartment::TYPE_RENTING){
+                    $model->time_inVal = NULL;
+                    $model->time_outVal = NULL;
+                    $model->date_start = NULL;
+                    $model->date_end = NULL;
+                }elseif ($model->time_in || $model->time_out) {
 					$model->time_inVal = $this->getI18nTimeIn($model->time_in);
 					$model->time_outVal = $this->getI18nTimeOut($model->time_out);
 				}
@@ -103,11 +120,7 @@ class MainController extends ModuleUserController{
 				$model->type = $types[$model->type];
 
 				$notifier = new Notifier;
-
-				if (!$isForBuy)
-					$notifier->raiseEvent('onNewSimpleBookingForRent', $model);
-				else
-					$notifier->raiseEvent('onNewSimpleBookingForBuy', $model);
+                $notifier->raiseEvent('onNewBooking', $model);
 
 				Yii::app()->user->setFlash('success', tt('Operation successfully complete. Your order will be reviewed by administrator.'));
 			}

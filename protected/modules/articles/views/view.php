@@ -2,12 +2,12 @@
 $this->pageTitle .= ' - '.tt("FAQ").' - '.$model['page_title'];
 $this->breadcrumbs=array(
 	tt("FAQ")=>array('index'),
-	$model['page_title'],
+	truncateText(CHtml::encode($model->getStrByLang('page_title')), 10),
 );
 ?>
 
 <h1><?php echo tt("FAQ"); ?></h1>
-    
+
 <?php
 	if ($articles) {
 		echo '<ul class="apartment-description-ul">';
@@ -22,4 +22,18 @@ $this->breadcrumbs=array(
 		<p><?php echo $model['page_body'];?></p>
 		<?php
 	}
-?>
+
+
+if(param('enableCommentsForFaq', 1)){
+	?>
+	<div id="comments">
+		<?php
+			$this->widget('application.modules.comments.components.commentListWidget', array(
+				'model' => $model,
+				'url' => $model->getUrl(),
+				'showRating' => false,
+			));
+		?>
+	</div>
+	<?php
+}

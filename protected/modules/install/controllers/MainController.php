@@ -2,8 +2,8 @@
 /**********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- *	version				:	1.5.1
- *	copyright			:	(c) 2013 Monoray
+ *	version				:	1.8.2
+ *	copyright			:	(c) 2014 Monoray
  *	website				:	http://www.monoray.ru/
  *	contact us			:	http://www.monoray.ru/contact
  *
@@ -21,7 +21,7 @@ class MainController extends CController {
 	public $layout = '/layouts/main';
 
 	protected function beforeAction($action){
-		if(file_exists(ALREADY_INSTALL_FILE)) {
+		if(oreInstall::isInstalled()) {
 			throw404();
 		}
 
@@ -363,6 +363,8 @@ class MainController extends CController {
 				ROOT_PATH . $ds . 'uploads' . $ds . 'slider',
 				ROOT_PATH . $ds . 'uploads' . $ds . 'slider' . $ds . 'thumb',
 				ROOT_PATH . $ds . 'uploads' . $ds . 'video',
+				ROOT_PATH . $ds . 'uploads' . $ds . 'news',
+				ROOT_PATH . $ds . 'uploads' . $ds . 'ava',
 			);
 		} else {
 			$aCheckDir = array(
@@ -375,6 +377,8 @@ class MainController extends CController {
 				ROOT_PATH . $ds . 'uploads' . $ds . 'objects',
 				ROOT_PATH . $ds . 'uploads' . $ds . 'qrcodes',
 				ROOT_PATH . $ds . 'uploads' . $ds . 'video',
+				ROOT_PATH . $ds . 'uploads' . $ds . 'news',
+				ROOT_PATH . $ds . 'uploads' . $ds . 'ava',
 			);
 		}
 

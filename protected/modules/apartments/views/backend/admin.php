@@ -82,10 +82,20 @@ $columns = array(
 		'name' => 'type',
 		'type' => 'raw',
 		'value' => 'Apartment::getNameByType($data->type)',
-		'htmlOptions' => array(
+		/*'htmlOptions' => array(
 			'style' => 'width: 100px;',
-		),
+		),*/
 		'filter' => Apartment::getTypesArray(),//CHtml::dropDownList('Apartment[type_filter]', $currentType, Apartment::getTypesArray(true)),
+		'sortable' => false,
+	),
+	array(
+		'name' => 'obj_type_id',
+		'type' => 'raw',
+		'value' => '(isset($data->objType) && $data->objType) ? $data->objType->name : ""',
+		/*'htmlOptions' => array(
+			'style' => 'width: 100px;',
+		),*/
+		'filter' => Apartment::getObjTypesArray(),
 		'sortable' => false,
 	),
 );
@@ -135,8 +145,17 @@ $columns[]=array(
 		'style' => 'width: 150px;',
 	),
 	'type' => 'raw',
-	'value' => '($data->user->id != 1) ? CHtml::link(CHtml::encode($data->user->email),array("/users/backend/main/view","id" => $data->user->id))  : tt("administrator", "common")',
+	'value' => '(isset($data->user) && $data->user->id != 1) ? CHtml::link(CHtml::encode($data->user->email), array("/users/backend/main/view","id" => $data->user->id)) : tt("administrator", "common")',
 );
+
+$columns[]=array(
+    'name' => 'ownerUsername',
+    'htmlOptions' => array(
+        'style' => 'width: 150px;',
+    ),
+    'value' => 'isset($data->user->username) ? $data->user->username : ""'
+);
+
 
 $columns[]=array(
 	'header' => tc('Name'),
@@ -149,7 +168,7 @@ $columns[]=array(
 if(issetModule('paidservices')){
 	$columns[] = array(
 		'header'=>tc('Paid services'),
-		'value'=>'$data->getPaidHtml(false, true)',
+		'value'=>'$data->getPaidHtml(true, true)',
 		'type'=>'raw',
 		'htmlOptions' => array(
 			'style' => 'width: 200px;',

@@ -73,3 +73,18 @@ function ajaxMoveRequest(url, tableId){
     });
 
 })(jQuery);
+
+var scriptLoaded = [];
+
+function loadScript(url, reload) {
+    reload = reload || true;
+
+    if(typeof scriptLoaded[url] == 'undefined' || reload){
+        var script = document.createElement("script");
+        script.type = "text/javascript";
+        script.src = url;
+        document.body.appendChild(script);
+
+        scriptLoaded[url] = 1;
+    }
+}

@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -58,20 +58,6 @@ class ParentModel extends CActiveRecord
         return implode(', ', $i18nRuleArr);
     }
 
-    public function afterDelete(){
-        if(isset($this->sorter)){
-            $sql = "SELECT id FROM ".$this->tableName()." ORDER BY sorter ASC";
-            $ids = Yii::app()->db->createCommand($sql)->queryColumn();
-            $i = 1;
-            foreach($ids as $id){
-                $sql = "UPDATE ".$this->tableName()." SET sorter=$i WHERE id=$id";
-                Yii::app()->db->createCommand($sql)->execute();
-                $i++;
-            }
-        }
-        return parent::afterDelete();
-    }
-
     public function getStrByLang($str){
    		$str .= '_'.Yii::app()->language;
    		return $this->$str;
@@ -92,7 +78,6 @@ class ParentModel extends CActiveRecord
 	{
 		foreach($this->getValidators($attribute) as $validator)
 		{
-
 			if($validator instanceof CInlineValidator && $validator->method == 'i18nRequired')
 				return true;
 		}

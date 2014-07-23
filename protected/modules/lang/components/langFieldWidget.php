@@ -2,8 +2,8 @@
 /**********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- *    version                :    1.5.1
- *    copyright            :    (c) 2013 Monoray
+ *    version                :    1.8.2
+ *    copyright            :    (c) 2014 Monoray
  *    website                :    http://www.monoray.ru/
  *    contact us            :    http://www.monoray.ru/contact
  *
@@ -39,7 +39,10 @@ class langFieldWidget extends CWidget {
 
 	private $uniqueKey;
 
-	public function getViewPath($checkTheme = false) {
+	public function getViewPath($checkTheme=false){
+		if($checkTheme && ($theme=Yii::app()->getTheme())!==null){
+			return $theme->getViewPath().DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR.'lang';
+		}
 		return Yii::getPathOfAlias('application.modules.lang.views');
 	}
 
@@ -118,6 +121,7 @@ class langFieldWidget extends CWidget {
 
 		$html .= '<div class="rowold">';
 		$html .= CHtml::activeLabel($this->model, $this->field, array('required' => $this->model->isLangAttributeRequired($this->field)));
+        $html .= Apartment::getTip($this->field);
 
 		if ($this->note) {
 			$html .= CHtml::tag('p', array('class' => 'note'), $this->note);
@@ -134,7 +138,7 @@ class langFieldWidget extends CWidget {
 
 			case 'text':
 				$html .= CHtml::activeTextArea($this->model, $field, array(
-					'class' => 'width500',
+					'class' => 'width500 height200',
 					'id' => $fieldId
 				));
 				break;
@@ -146,8 +150,10 @@ class langFieldWidget extends CWidget {
 
 				if (Yii::app()->user->getState('isAdmin')) { // if admin - enable upload image
 					$options = array(
-						'filebrowserUploadUrl' => CHtml::normalizeUrl(array('/site/uploadimage?type=imageUpload'))
+						'filebrowserUploadUrl' => Yii::app()->createAbsoluteUrl('/site/uploadimage', array('type' => 'imageUpload', Yii::app()->request->csrfTokenName => Yii::app()->request->csrfToken))
 					);
+
+					$options['allowedContent'] = true;
 				}
 
 				$html .= $this->widget('application.extensions.ckeditor.CKEditor', array(

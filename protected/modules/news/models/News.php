@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -19,6 +19,12 @@
 class News extends ParentModel {
 	public $title;
 	public $dateCreated;
+	public $dateCreatedLong;
+	public $supportedExt = 'jpg, png, gif';
+
+	public $newsImage;
+	public $maxImageSize;
+	public $maxImageSizeMb;
 
 	public static function model($className=__CLASS__) {
 		return parent::model($className);
@@ -32,6 +38,13 @@ class News extends ParentModel {
 		return array(
 			array('title, body', 'i18nRequired'),
 			array('title', 'i18nLength', 'max' => 128),
+			array(
+				'newsImage', 'file',
+				'types' => $this->supportedExt,
+				'maxSize' => $this->maxImageSize,
+				'tooLarge' => Yii::t('module_apartments', 'The file was larger than {size}MB. Please upload a smaller file.', array('{size}' => $this->maxImageSizeMb)),
+				'allowEmpty' => true,
+			),
 			array($this->getI18nFieldSafe(), 'safe'),
 		);
 	}
@@ -40,6 +53,7 @@ class News extends ParentModel {
         return array(
             'title' => 'varchar(255) not null',
             'body' => 'text not null',
+			'announce' => 'text not null',
         );
     }
 
@@ -50,6 +64,16 @@ class News extends ParentModel {
 		);
 	}
 
+	public function	init(){
+		$fileMaxSize['postSize'] = toBytes(ini_get('post_max_size'));
+		$fileMaxSize['uploadSize'] = toBytes(ini_get('upload_max_filesize'));
+		$this->maxImageSize = min($fileMaxSize);
+		$this->maxImageSizeMb = round($this->maxImageSize / (1024*1024));
+
+
+		parent::init();
+	}
+
     public function getTitle(){
         return $this->getStrByLang('title');
     }
@@ -58,9 +82,13 @@ class News extends ParentModel {
         return $this->getStrByLang('body');
     }
 
-	public function relations() {
+	public function getAnnounce(){
+		return $this->getStrByLang('announce');
+	}
 
+	public function relations(){
 		return array(
+			'image' => array(self::BELONGS_TO, 'NewsImage', 'image_id'),
 		);
 	}
 
@@ -71,6 +99,8 @@ class News extends ParentModel {
 			'body' => tt('News body', 'news'),
 			'date_created' => tt('Creation date', 'news'),
 			'dateCreated' => tt('Creation date', 'news'),
+			'announce' => tt('Announce', 'news'),
+			'newsImage' => tt('Image for news', 'news'),
 		);
 	}
 
@@ -124,8 +154,27 @@ class News extends ParentModel {
 		$dateFormat = param('newsModule_dateFormat', 0) ? param('newsModule_dateFormat') : param('dateFormat', 'd.m.Y H:i:s');
 		$this->dateCreated = date($dateFormat, strtotime($this->date_created));
 
+		$this->dateCreatedLong = Yii::app()->dateFormatter->format(Yii::app()->locale->getDateFormat('long'), CDateTimeParser::parse($this->date_created, 'yyyy-MM-dd hh:mm:ss'));
+
 		return parent::afterFind();
 	}
+
+	public function beforeSave(){
+		if($this->newsImage){
+			if($this->image){
+				$this->image->delete();
+			}
+			$image = new NewsImage();
+			$image->imageInstance = $this->newsImage;
+			$image->save();
+			if($image->id){
+				$this->image_id = $image->id;
+			}
+		}
+
+		return parent::beforeSave();
+	}
+
 
 	public function afterSave() {
 		if(issetModule('seo') && param('genFirendlyUrl')){
@@ -139,6 +188,12 @@ class News extends ParentModel {
 			$sql = 'DELETE FROM {{seo_friendly_url}} WHERE model_id="'.$this->id.'" AND model_name = "News"';
 			Yii::app()->db->createCommand($sql)->execute();
 		}
+		if($this->image){
+			$this->image->delete();
+		}
+
+		$sql = 'DELETE FROM {{comments}} WHERE model_id=:id AND model_name="News"';
+		Yii::app()->db->createCommand($sql)->execute(array(':id' => $this->id));
 
 		return parent::beforeDelete();
 	}
@@ -146,31 +201,23 @@ class News extends ParentModel {
 	public function getAllWithPagination($inCriteria = null){
 		if($inCriteria === null){
 			$criteria = new CDbCriteria;
-			$criteria->order = 'date_created DESC';
+			$criteria->order = 't.date_created DESC';
 		} else {
 			$criteria = $inCriteria;
 		}
 
 		$pages = new CPagination($this->count($criteria));
-		$pages->pageSize = param('module_news_itemsPerPage', 10);
+		$pages->pageSize = param('moduleNews_newsPerPage', 10);
 		$pages->applyLimit($criteria);
 
 		$dependency = new CDbCacheDependency('SELECT MAX(date_updated) FROM {{news}}');
 
+		$criteria->with = array('image');
 		$items = $this->cache(param('cachingTime', 1209600), $dependency)->findAll($criteria);
 
 		return array(
 			'items' => $items,
 			'pages' => $pages,
 		);
-	}
-
-	public static function getRel($id, $lang){
-		$model = self::model()->resetScope()->findByPk($id);
-
-		$title = 'title_'.$lang;
-		$model->title = $model->$title;
-
-		return $model;
 	}
 }

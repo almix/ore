@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -33,7 +33,7 @@ class CustomTwitterService extends TwitterOAuthService {
 	}
 
 	protected function fetchAttributes() {
-		$info = $this->makeSignedRequest('https://api.twitter.com/1/account/verify_credentials.json');
+		$info = $this->makeSignedRequest('https://api.twitter.com/1.1/account/verify_credentials.json');
 
 		$this->attributes['id'] = $info->id;
 		$this->attributes['firstName'] = $info->name; // $info->screen_name;

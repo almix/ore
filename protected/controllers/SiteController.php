@@ -3,8 +3,8 @@
 /* * ********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- * 	version				:	1.5.1
- * 	copyright				:	(c) 2013 Monoray
+ * 	version				:	1.8.2
+ * 	copyright				:	(c) 2014 Monoray
  * 	website				:	http://www.monoray.ru/
  * 	contact us				:	http://www.monoray.ru/contact
  *
@@ -20,6 +20,7 @@
 class SiteController extends Controller {
 
 	public $cityActive;
+    public $newFields;
 
 	public function actions() {
 		return array(
@@ -48,10 +49,12 @@ class SiteController extends Controller {
 	}
 
 	public function actionIndex() {
-		//$dependency = new CDbCacheDependency('SELECT date_updated FROM {{menu}} WHERE id = "1"');
-		$page = Menu::model()->/* cache(param('cachingTime', 1209600), $dependency)-> */findByPk(1);
+		$page = Menu::model()->findByPk(InfoPages::MAIN_PAGE_ID);
 
-        if(!isFree() && !isset($_GET['lang'])){
+        $langs = Lang::getActiveLangs();
+        $countLangs = count($langs);
+
+        if(!isFree() && !isset($_GET['lang']) && ($countLangs > 1 || ($countLangs == 1 && param('useLangPrefixIfOneLang')))){
             $canonicalUrl = Yii::app()->getBaseUrl(true);
 
             $canonicalUrl .= '/'.Yii::app()->language;
@@ -60,14 +63,28 @@ class SiteController extends Controller {
 
         Yii::app()->user->setState('searchUrl', NULL);
 
-        if (isset($_POST['is_ajax'])) {
-			$this->renderPartial('index', array('page' => $page), false, true);
+		$criteriaNews = new CDbCriteria();
+		$criteriaNews->limit = 10;
+		$criteriaNews->order = 'date_created DESC';
+		$newsIndex = News::model()->findAll($criteriaNews);
+
+        if (isset($_GET['is_ajax'])) {
+//			$modeListShow = User::getModeListShow();
+//			if ($modeListShow == 'table') {
+//				# нужны скрипты и стили, поэтому processOutput установлен в true только для table
+//				$this->renderPartial('index', array('page' => $page, 'newsIndex' => $newsIndex), false, true);
+//			}
+//			else {
+				$this->renderPartial('index', array('page' => $page, 'newsIndex' => $newsIndex));
+//			}
 		} else {
-			$this->render('index', array('page' => $page));
+			$this->render('index', array('page' => $page, 'newsIndex' => $newsIndex));
 		}
 	}
 
 	public function actionError() {
+		$this->layout = '//layouts/inner';
+
 		if ($error = Yii::app()->errorHandler->error) {
 			if (Yii::app()->request->isAjaxRequest)
 				echo $error['message'];
@@ -119,7 +136,7 @@ class SiteController extends Controller {
 						elseif ($homePhone)
 							$phone = $homePhone;
 
-						$user = $this->createUser($email, $firstName, $phone, '', true);
+						$user = User::createUser(array('email' => $email, 'phone' => $phone, 'username' => $firstName), true);
 
 						if (!$user && isset($user['id'])) {
 							$authIdentity->redirect(Yii::app()->createAbsoluteUrl('/site/login') . '?soc_error_save=1');
@@ -137,6 +154,9 @@ class SiteController extends Controller {
 
 					if ($existId) {
 						$result = $model->loginSocial($existId);
+
+						User::updateUserSession();
+
 						if ($result) {
 							//						Yii::app()->user->clearState('id');
 							//						Yii::app()->user->clearState('first_name');
@@ -170,13 +190,15 @@ class SiteController extends Controller {
 		if (isset($_POST['LoginForm'])) {
 			$model->attributes = $_POST['LoginForm'];
 			if ($model->validate() && $model->login()) {
+				User::updateUserSession();
+
 				if (Yii::app()->user->getState('isAdmin')) {
 					NewsProduct::getProductNews();
 					$this->redirect(array('/apartments/backend/main/admin'));
 					Yii::app()->end();
 				}
 
-				if (Yii::app()->user->isGuest) {
+				/*if (Yii::app()->user->isGuest) {
 					$this->redirect(Yii::app()->user->returnUrl);
 				} else {
 					if (!Yii::app()->user->getState('returnedUrl')) {
@@ -184,6 +206,12 @@ class SiteController extends Controller {
 					} else {
 						$this->redirect(Yii::app()->user->getState('returnedUrl'));
 					}
+				}*/
+
+				if (!Yii::app()->user->returnUrl) {
+					$this->redirect(array('/usercpanel/main/index'));
+				} else {
+					$this->redirect(Yii::app()->user->returnUrl);
 				}
 			}
 		}
@@ -211,6 +239,8 @@ class SiteController extends Controller {
 	}
 
 	public function actionRecover() {
+		$this->layout = '//layouts/inner';
+
 		$modelRecover = new RecoverForm;
 
 		$key = Yii::app()->request->getParam('key');
@@ -251,7 +281,7 @@ class SiteController extends Controller {
 						}
 
 						$tempRecoverPassword = $model->randomString();
-						$recoverPasswordKey = $this->generateActivateKey();
+						$recoverPasswordKey = User::generateActivateKey();
 
 						$model->temprecoverpassword = $tempRecoverPassword;
 						$model->recoverPasswordKey = $recoverPasswordKey;
@@ -261,7 +291,7 @@ class SiteController extends Controller {
 
 						// send email
 						$notifier = new Notifier;
-						$notifier->raiseEvent('onRecoveryPassword', $model, $model->id);
+						$notifier->raiseEvent('onRecoveryPassword', $model, array('user' => $model));
 
 						showMessage(tc('Recover password'), tc('recover_pass_temp_send'));
 					} else {
@@ -277,25 +307,27 @@ class SiteController extends Controller {
 	}
 
 	public function actionRegister() {
+		$this->layout = '//layouts/inner';
+
 		if (Yii::app()->user->isGuest && param('useUserads')) {
 			$model = new User('register');
 
 			if (isset($_POST['User'])) {
 				$model->attributes = $_POST['User'];
 				if ($model->validate()) {
-					$activateKey = $this->generateActivateKey();
-					$user = $this->createUser($model->email, $model->username, $model->phone, $activateKey);
+                    $model->activatekey = User::generateActivateKey();
+					$user = User::createUser($model->attributes);
 
 					if ($user) {
 						$model->id = $user['id'];
 						$model->password = $user['password'];
 						$model->email = $user['email'];
 						$model->username = $user['username'];
-						$model->activatekey = $user['activateKey'];
+						$model->activatekey = $user['activatekey'];
 						$model->activateLink = $user['activateLink'];
 
 						$notifier = new Notifier;
-						$notifier->raiseEvent('onRegistrationUser', $model, $model->id);
+						$notifier->raiseEvent('onNewUser', $model, array('user' => $user['userModel']));
 						showMessage(Yii::t('common', 'Registration'), Yii::t('common', 'You were successfully registered. The letter for account activation has been sent on {useremail}', array('{useremail}' => $user['email'])));
 					} else {
 						showMessage(Yii::t('common', 'Registration'), Yii::t('common', 'Error. Repeat attempt later'));
@@ -308,54 +340,6 @@ class SiteController extends Controller {
 		} else {
 			$this->redirect('index');
 		}
-	}
-
-	public function generateActivateKey() {
-		return md5(uniqid());
-	}
-
-	public function createUser($email, $username = '', $phone = '', $activateKey = '', $isActive = false) {
-		$model = new User;
-		$model->email = $email;
-		if ($username)
-			$model->username = $username;
-		if ($phone)
-			$model->phone = $phone;
-		if ($isActive)
-			$model->active = 1;
-		if ($activateKey)
-			$model->activatekey = $activateKey;
-
-		$password = $model->randomString();
-		$model->setPassword($password);
-
-		$return = array();
-
-		if ($model->save()) {
-			$return = array(
-				'email' => $model->email,
-				'username' => $model->username,
-				'password' => $password,
-				'id' => $model->id,
-				'active' => $model->active,
-				'activateKey' => $activateKey,
-				'activateLink' => Yii::app()->createAbsoluteUrl('/site/activation?key=' . $activateKey)
-			);
-		}
-		else {
-			$errors = $model->getErrors();
-			if ($errors) {
-				foreach($errors as $error) {
-					if ($error && is_array($error)) {
-						foreach($error as $item) {
-							echo '<div class="alert alert-block alert-error fade in">'.$item.'</div>';
-						}
-					}
-				}
-			}
-			exit;
-		}
-		return $return;
 	}
 
 	public function actionActivation() {
@@ -381,51 +365,8 @@ class SiteController extends Controller {
 			$this->redirect(array('/site/index'));
 	}
 
-	public function actionAddLang() {
-
-		$modelNameArr = array(
-			'Apartment',
-			'MetroStation',
-			'ReferenceCategories',
-			'ReferenceValues',
-			'WindowTo',
-			'Lang',
-			'TimesIn',
-			'TimesOut',
-			'ApartmentCity',
-			'ApartmentObjType',
-			'News',
-			'Menu',
-			'Article'
-		);
-
-		$db = Yii::app()->db;
-		$langNew = 'en';
-
-		Yii::import('application.modules.referencecategories.models.ReferenceCategories');
-		Yii::import('application.modules.referencevalues.models.ReferenceValues');
-		Yii::import('application.modules.windowto.models.WindowTo');
-		Yii::import('application.modules.articles.models.Article');
-		foreach ($modelNameArr as $modelName) {
-			deb($modelName);
-			$model = new $modelName;
-			$table = $model->tableName();
-			$i18nFields = $model->i18nFields();
-
-			foreach ($i18nFields as $field => $type) {
-				$fieldAdd = $field . '_' . $langNew;
-				deb($fieldAdd);
-				$sql = "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_NAME='{$table}' AND COLUMN_NAME='{$fieldAdd}'";
-				$fieldExist = $db->createCommand($sql)->queryScalar();
-				if (!$fieldExist) {
-					$db->createCommand()->addColumn($table, $fieldAdd, $type);
-				}
-			}
-		}
-	}
-
 	public function actionVersion() {
-		echo param('version_name') . ' ' . param('version');
+		echo ORE_VERSION_NAME . ' ' . ORE_VERSION;
 	}
 
 	public function actionUploadImage() {
@@ -469,43 +410,4 @@ class SiteController extends Controller {
 			}
 		}
 	}
-
-	public function actionTest(){
-		@ini_set('max_execution_time', 3600);
-
-		$sql = 'SELECT id, message, translation_en FROM {{translate_message}} WHERE status=0 OR status=1';
-		$messages = Yii::app()->db->createCommand($sql)->queryAll();
-
-		//$messages = array('The required fields are marked with an asterisk (<span class="required">*</span>).');
-
-		$options = array(
-			'fileTypes' => array('php'),
-		);
-		$files = CFileHelper::findFiles(realpath(Yii::getPathOfAlias('application')), $options);
-
-		foreach($files as $file){
-			$subject = file_get_contents($file);
-			foreach($messages as $message){
-				//$tmp = preg_match_all('@\''.preg_quote($message['message']).'\'@', $subject, $matches);
-
-				$message['translation_en'] = str_replace('\'', '\\\'', $message['translation_en']);
-				$count = 0;
-				$tmp = preg_replace('@tc\(\''.preg_quote($message['message']).'\'\)@', 'tc(\''.$message['translation_en'].'\')', $subject, -1, $count);
-
-				if($tmp !== NULL){
-					$subject = $tmp;
-				}
-				if($count){
-					$sql = 'UPDATE {{translate_message}} SET message=translation_en WHERE id="'.$message['id'].'"';
-					Yii::app()->db->createCommand($sql)->execute();
-				}
-				/*if($tmp > 0){
-					$sql = 'UPDATE {{translate_message}} SET status=4 WHERE id="'.$message['id'].'"';
-					Yii::app()->db->createCommand($sql)->execute();
-				}*/
-			}
-			file_put_contents($file, $subject);
-		}
-	}
-
 }

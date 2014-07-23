@@ -2,13 +2,13 @@
 $this->pageTitle = Yii::app()->name . ' - ' . tc('Manage settings');
 
 $this->breadcrumbs=array(
-    
+
 );
 
 $this->adminTitle = Yii::t('common','Update param "{name}"', array('{name}'=>$model->title));
 
 $required = true;
-if (in_array($model->name, ConfigurationModel::model()->allowEmpty))
+if ($model->allowEmpty)
 	$required = false;
 
 if($ajax){ ?>
@@ -33,11 +33,17 @@ if($ajax){ ?>
     <input type="hidden" name="config_id" id="config_id" value="<?php echo $model->id; ?>">
 	<input type="hidden" id="config_required" value="<?php echo $required ?>">
 
-	<div class="rowold">
-		<?php echo CHtml::activeLabel($model, 'value', array('required' => $required));  ?>
-		<?php echo $form->textArea($model, 'value', array('class' => 'width450', 'id' => 'config_value')); ?>
-		<?php echo $form->error($model, 'value'); ?>
-	</div>
+    <?php
+    echo '<div class="rowold">';
+    echo CHtml::activeLabel($model, 'value', array('required' => $required));
+    if($model->type == 'enum' && $list = ConfigurationModel::getEnumListForKey($model->name)){
+        echo $form->dropDownList($model, 'value', $list, array('class' => 'width450', 'id' => 'config_value'));
+    } else {
+        echo $form->textArea($model, 'value', array('class' => 'width450', 'id' => 'config_value'));
+    }
+    echo $form->error($model, 'value');
+    echo '</div>';
+    ?>
 
 <?php if(!$ajax){ ?>
     <div class="rowold buttons">

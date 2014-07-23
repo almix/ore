@@ -1,5 +1,7 @@
 <?php
 
+$this->pageTitle=Yii::app()->name . ' - ' . tt('Manage lang messages', 'translateMessage');
+
 $this->menu=array(
 	array('label'=>tt('Add message'), 'url'=>array('create')),
 );

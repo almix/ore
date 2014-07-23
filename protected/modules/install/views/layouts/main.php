@@ -44,8 +44,8 @@
 	<div id="container">
 		<div class="logo">
 			<a title="<?php echo tFile::getT('module_install', 'Go to main page'); ?>" href="<?php echo Yii::app()->request->baseUrl; ?>/">
-				<img width="302" height="62" alt="<?php echo tFile::getT('module_install', 'Open Real Estate'); ?>"
-					 src="<?php echo Yii::app()->request->baseUrl; ?>/images/pages/logo-open-re.png" id="logo" />
+				<img width="259" height="50" alt="<?php echo tFile::getT('module_install', 'Open Real Estate'); ?>"
+					 src="<?php echo Yii::app()->request->baseUrl; ?>/images/pages/logo-open-ore.png" id="logo" />
 			</a>
 		</div>
         <?php

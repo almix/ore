@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -17,6 +17,16 @@
 ***********************************************************************************************/
 
 class ReferenceCategories extends ParentModel{
+
+    const TYPE_STANDARD = 1;
+    const TYPE_FOR_EDITOR = 2;
+
+    public static function getTypeList(){
+        return array(
+            self::TYPE_STANDARD => tt('Usual category', 'formeditor'),
+            self::TYPE_FOR_EDITOR => tt('Category for the "Forms Editor"', 'formeditor'),
+        );
+    }
 
 	public static function model($className=__CLASS__){
 		return parent::model($className);
@@ -41,7 +51,7 @@ class ReferenceCategories extends ParentModel{
 			array('style', 'required'),
 			array('title', 'i18nRequired'),
 			array('style', 'in', 'range' => array('column1', 'column2', 'column3')),
-			array('sorter', 'numerical', 'integerOnly'=>true),
+			array('sorter, type', 'numerical', 'integerOnly'=>true),
 			array('title', 'i18nLength', 'max'=>255),
 			array($this->getI18nFieldSafe(), 'safe'),
         );
@@ -63,6 +73,7 @@ class ReferenceCategories extends ParentModel{
 	public function attributeLabels(){
 		return array(
 			'id' => 'ID',
+            'type' => tc('Type'),
 			'title' => tt('Reference name'),
 			'sorter' => 'Sorter',
 			'date_updated' => 'Date Updated',
@@ -96,10 +107,9 @@ class ReferenceCategories extends ParentModel{
 		return parent::beforeSave();
 	}
 
-	public function catTitle(){
-		$tmp = 'title_'.Yii::app()->language;
-		return $this->$tmp;
-	}
+    public function getTitle(){
+        return $this->getStrByLang('title');
+    }
 
 	public function beforeDelete(){
 		$sql = 'DELETE FROM {{apartment_reference_values}} WHERE reference_category_id="'.$this->id.'";';
@@ -107,6 +117,11 @@ class ReferenceCategories extends ParentModel{
 
 		$sql = 'DELETE FROM {{apartment_reference}} WHERE reference_id="'.$this->id.'"';
 		Yii::app()->db->createCommand($sql)->execute();
+
+        $formDesignerModel = FormDesigner::model()->findByAttributes(array('reference_id' => $this->id));
+        if($formDesignerModel){
+            $formDesignerModel->delete();
+        }
 
 		return parent::beforeDelete();
 	}

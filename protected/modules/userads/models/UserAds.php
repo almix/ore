@@ -2,8 +2,8 @@
 /**********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- *	version				:	1.5.1
- *	copyright			:	(c) 2013 Monoray
+ *	version				:	1.8.2
+ *	copyright			:	(c) 2014 Monoray
  *	website				:	http://www.monoray.ru/
  *	contact us			:	http://www.monoray.ru/contact
  *
@@ -25,7 +25,13 @@ class UserAds extends Apartment {
 
 		$criteria->compare('id', $this->id);
 		$criteria->compare($tmp, $this->$tmp, true);
-        $criteria->compare('city_id', $this->city_id);
+        if (issetModule('location') && param('useLocation', 1)) {
+                $criteria->compare('loc_country', $this->loc_country);
+                $criteria->compare('loc_region', $this->loc_region);
+                $criteria->compare('loc_city', $this->loc_city);
+        } else {
+            $criteria->compare('city_id', $this->city_id);
+        }
 		$criteria->addCondition('owner_id = '.Yii::app()->user->id);
 
 		if($this->active === '0' || $this->active){
@@ -43,8 +49,15 @@ class UserAds extends Apartment {
 			$criteria->params[':type'] = $this->type;
 		}
 
+		if($this->obj_type_id){
+			$criteria->addCondition('obj_type_id = :obj_type_id');
+			$criteria->params[':obj_type_id'] = $this->obj_type_id;
+		}
+
 		$criteria->addCondition('active <> :draft');
 		$criteria->params['draft'] = Apartment::STATUS_DRAFT;
+
+		$criteria->addInCondition('type', self::availableApTypesIds());
 
 		return new CActiveDataProvider($this, array(
 			'criteria' => $criteria,
@@ -74,7 +87,7 @@ class UserAds extends Apartment {
 		if($ignore && $data->id == $ignore){
 			return '';
 		}
-		$url = Yii::app()->controller->createUrl("activate", array("id" => $data->id, 'action' => ($data->owner_active==1?'deactivate':'activate') ));
+		$url = Yii::app()->controller->createUrl("/userads/main/activate", array("id" => $data->id, 'action' => ($data->owner_active==1?'deactivate':'activate') ));
 		$img = CHtml::image(
 					Yii::app()->request->baseUrl.'/images/'.($data->owner_active?'':'in').'active.png',
 					Yii::t('common', $data->owner_active?'Inactive':'Active'),

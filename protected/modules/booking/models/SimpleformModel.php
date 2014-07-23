@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -35,6 +35,8 @@ class SimpleformModel extends CFormModel {
 	public $activatekey;
 	public $activateLink;
 
+	public $verifyCode;
+
 	public function rules() {
 		return array(
 			array('date_start, date_end, time_in, time_out, type, ' . (Yii::app()->user->isGuest ? 'useremail, username' : ''), 'required', 'on' => 'forrent'),
@@ -47,6 +49,9 @@ class SimpleformModel extends CFormModel {
 			array('useremail, username, phone', 'length', 'max' => 128),
 			array('phone', 'required'),
 			array('comment, type', 'safe'),
+
+			array('verifyCode', (Yii::app()->user->isGuest) ? 'required' : 'safe'),
+			array('verifyCode', 'captcha', 'allowEmpty'=> !(Yii::app()->user->isGuest)),
 		);
 	}
 
@@ -86,5 +91,13 @@ class SimpleformModel extends CFormModel {
 			'phone' => Yii::t('common', 'Your phone number'),
 			'rooms' => Yii::t('common', 'Number of rooms'),
 			'type' => Yii::t('common', 'I want'),
+			'verifyCode' => tc('Verify Code'),
 		);
-	}}
+	}
+
+    public function getTypeName(){
+        return $this->type;
+        //$types = Apartment::getTypesWantArray();
+        //return isset($types[$this->type]) ? $types[$this->type] : '';
+    }
+}

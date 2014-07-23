@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -52,6 +52,12 @@ class Geocoding {
 		return json_decode(self::getGeocodingInfo($apiURL));
 	}
 
+	static function getGeocodingInfoJsonOSM($city, $address){
+		$address_string = ($city ? $city.', ' : '').$address;
+		$apiURL = 'http://nominatim.openstreetmap.org/search?format=json&q='.urlencode($address_string).'&limit=1';
+		return json_decode(self::getGeocodingInfo($apiURL));
+	}
+
 	static function getCoordsByAddress($address, $city = null){
 		$return = array();
 		if (param('useGoogleMap', 1)) {
@@ -68,7 +74,8 @@ class Geocoding {
 					$return['lng'] = $result->results[0]->geometry->location->lng;
 				}
 			}
-		} elseif (param('useYandexMap', 1)) {
+		}
+		elseif (param('useYandexMap', 1)) {
 			if($city){
 				$result = self::getGeocodingInfoJsonYandex($city, $address);
 			} else {
@@ -82,6 +89,20 @@ class Geocoding {
 					$pos = explode(' ', $result->response->GeoObjectCollection->featureMember[0]->GeoObject->Point->pos);
 					$return['lat'] = $pos[1];
 					$return['lng'] = $pos[0];;
+				}
+			}
+		}
+		elseif (param('useOSMMap', 1)) {
+			if($city){
+				$result = self::getGeocodingInfoJsonOSM($city, $address);
+			} else {
+				$result = self::getGeocodingInfoJsonOSM(param('defaultCity', 'Москва'), $address);
+			}
+
+			if(isset($result[0])){
+				if(isset($result[0]->lat)){
+					$return['lat'] = $result[0]->lat;
+					$return['lng'] = $result[0]->lon;
 				}
 			}
 		}

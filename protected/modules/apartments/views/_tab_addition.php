@@ -1,4 +1,12 @@
 <?php
+if(issetModule('formeditor')){
+    echo '<dl class="ap-descr">';
+    Yii::import('application.modules.formeditor.models.HFormEditor');
+    $rows = HFormEditor::getExtendedFields();
+    HFormEditor::renderViewRows($rows, $data);
+    echo '</dl>';
+}
+
 	$prev = '';
 	$column1 = 0;
 	$column2 = 0;

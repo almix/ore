@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -17,6 +17,16 @@
 ***********************************************************************************************/
 
 class MainController extends ModuleUserController{
+	public function init() {
+		parent::init();
+
+		$specialOfferPage = Menu::model()->findByPk(Menu::SPECIALOFFERS_ID);
+		if ($specialOfferPage) {
+			if ($specialOfferPage->active == 0) {
+				throw404();
+			}
+		}
+	}
 
 	public function actionIndex(){
         Yii::app()->user->setState('searchUrl', NULL);
@@ -26,7 +36,7 @@ class MainController extends ModuleUserController{
 		$criteria = new CDbCriteria;
 		$criteria->condition = 'is_special_offer = 1';
 
-        if(isset($_POST['is_ajax'])){
+        if(isset($_GET['is_ajax'])){
             $this->renderPartial('index', array(
                 'criteria' => $criteria,
             ), false, true);

@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -18,6 +18,17 @@
 
 class MainController extends ModuleUserController{
 	public $modelName = 'News';
+
+	public function init() {
+		parent::init();
+
+		$newsPage = Menu::model()->findByPk(Menu::NEWS_ID);
+		if ($newsPage) {
+			if ($newsPage->active == 0) {
+				throw404();
+			}
+		}
+	}
 
 	public function actionIndex(){
 		$model = new $this->modelName;

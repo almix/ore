@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -74,5 +74,8 @@ return array(
 	'Site language' => 'Язык сайта',
 	'Preferred site language' => 'Предпочитаемый язык сайта',
 	'Other settings' => 'Прочие настройки',
-
+	'About product' => 'О продукте',
+	'Contact us' => 'Связаться с нами',
+	'Download' => 'Скачать',
+	'It is allowed to use the characters "a-zA-Z0-9_" without spaces' => 'Разрешается использовать знаки  "a-zA-Z0-9_" без пробелов',
 );

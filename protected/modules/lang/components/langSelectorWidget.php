@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -21,10 +21,12 @@ class langSelectorWidget extends CWidget
     public $type = 'dropdown';
     public $languages;
 
-    public function getViewPath($checkTheme = false)
-    {
-        return Yii::getPathOfAlias('application.modules.lang.views');
-    }
+	public function getViewPath($checkTheme=false){
+		if($checkTheme && ($theme=Yii::app()->getTheme())!==null){
+			return $theme->getViewPath().DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR.'lang';
+		}
+		return Yii::getPathOfAlias('application.modules.lang.views');
+	}
 
     public function run()
     {

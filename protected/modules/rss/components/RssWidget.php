@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -21,6 +21,9 @@ class RssWidget extends CWidget {
 
 
 	public function getViewPath($checkTheme=false){
+		if($checkTheme && ($theme=Yii::app()->getTheme())!==null){
+			return $theme->getViewPath().DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR.'rss';
+		}
 		return Yii::getPathOfAlias('application.modules.rss.views');
 	}
 
@@ -28,6 +31,8 @@ class RssWidget extends CWidget {
 		if(!$this->criteria){
 			throw404();
 		}
+
+        $this->criteria->order = 'date_created DESC';
 
 		$subCriteria = clone $this->criteria;
 		$subCriteria->select = 'MAX(t.date_updated) as date_updated';

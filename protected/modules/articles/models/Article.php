@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -122,6 +122,9 @@ class Article extends ParentModel {
 			$sql = 'DELETE FROM {{seo_friendly_url}} WHERE model_id="'.$this->id.'" AND model_name = "Article"';
 			Yii::app()->db->createCommand($sql)->execute();
 		}
+
+		$sql = 'DELETE FROM {{comments}} WHERE model_id=:id AND model_name="Article"';
+		Yii::app()->db->createCommand($sql)->execute(array(':id' => $this->id));
 
 		return parent::beforeDelete();
 	}

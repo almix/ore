@@ -3,6 +3,16 @@
  * @var $apartment Apartment
  */
 ?>
+<?php
+$this->pageTitle .= ' - '.tt("Message for the listing's owner №", 'notifier'). ' '. $apartment->id;
+
+$this->breadcrumbs=array(
+	Yii::t('common', 'Apartment search') => array('/quicksearch/main/mainsearch'),
+	truncateText(CHtml::encode($apartment->getStrByLang('title')), 8) => $apartment->getUrl(),
+	tt("Message for the listing's owner №", 'notifier'). ' '. $apartment->id,
+);
+?>
+
 <h2><?php echo tt("Message for the listing's owner №", 'notifier'). ' '. CHtml::link($apartment->id, $apartment->getUrl()); ?></h2>
 
 <?php
@@ -59,7 +69,8 @@
 	            <?php echo $form->labelEx($model, 'verifyCode');?>
 	            <?php
 		            $this->widget('CCaptcha',
-		                array('captchaAction' => '/apartments/main/captcha', 'buttonOptions' => array('style' => 'display:block;') )
+		                array('captchaAction' => '/apartments/main/captcha', 'buttonOptions' => array('style' => 'display:block;'),
+							'imageOptions'=>array('id'=>'send_email_captcha'))
 		            );
 		        ?>
 	            <br />

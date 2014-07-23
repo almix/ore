@@ -12,7 +12,6 @@ $this->adminTitle = tt('Add apartment');
 <?php
 	$this->renderPartial('_form',array(
 		'model'=>$model,
-		'categories' => $categories,
 		'supportvideoext' => $supportvideoext,
 		'supportvideomaxsize' => $supportvideomaxsize,
 	));

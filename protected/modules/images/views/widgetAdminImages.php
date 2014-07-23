@@ -123,9 +123,10 @@
 				placeholder: "ui-sortable-placeholder",
 				update : function () {
 					serial = $(".images-area-admin").sortable("serialize", {key: "image[]", attribute: "id"});
+					serial = serial + "&'.Yii::app()->request->csrfTokenName.'='.Yii::app()->request->csrfToken.'";
 					$.ajax({
 						"url": "'. Yii::app()->controller->createUrl('/images/main/sort', array('id' => $this->objectId)).'",
-						"type": "post",
+						"type": "POST",
 						"data": serial,
 						"success": function(data){
 

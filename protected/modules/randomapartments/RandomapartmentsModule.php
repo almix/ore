@@ -3,7 +3,7 @@
 *                            CMS Open Real Estate
 *                              -----------------
 *	version				:	1.2.0
-*	copyright			:	(c) 2013 Monoray
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *

@@ -15,6 +15,10 @@
     		'field' => 'title',
             'type' => 'string'
     	));
+
+    if(issetModule('formeditor')){
+        echo $form->dropDownListRow($model, 'type', ReferenceCategories::getTypeList());
+    }
     ?>
 
 	<div class="clear"></div>

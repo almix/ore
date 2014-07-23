@@ -1,6 +1,9 @@
-<h1><?php echo tc('MODULE of Payments & Payment systems '); ?></h1>
-
 <?php
+$this->pageTitle .= ' - '.tt('My payments');
+$this->breadcrumbs = array(
+    tc('Control panel') => Yii::app()->createUrl('/usercpanel'),
+    tt('My payments'),
+);
 
 if (!isset($model->payments)){
 
@@ -31,7 +34,7 @@ if (!isset($model->payments)){
 	            array(
 		            'name' => Yii::t('module_comments', 'Apartment_id'),
 		            'type' => 'raw',
-		            'value' => 'CHtml::link($data->apartment_id, Apartment::getUrlById($data->apartment_id))',
+		            'value' => '(isset($data->ad) && $data->ad->id) ? CHtml::link($data->ad->id, $data->ad->getUrl()) : tc("No")',
 		            'filter' => false,
 		            'sortable' => false,
 	            ),

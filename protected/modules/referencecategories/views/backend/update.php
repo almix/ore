@@ -2,7 +2,7 @@
 $this->breadcrumbs=array(
 	Yii::t('common', 'References') => array('/site/viewreferences'),
 	tt('Manage reference categories')=>array('admin'),
-	tt('Edit category:').' '.$model->catTitle(),
+	tt('Edit category:').' '.$model->getTitle(),
 );
 
 $this->menu=array(
@@ -11,7 +11,7 @@ $this->menu=array(
 	array('label'=>tt('Add reference category'), 'url'=>array('/referencecategories/backend/main/create')),
 
 );
-$this->adminTitle = tt('Edit category:').' '.$model->catTitle();
+$this->adminTitle = tt('Edit category:').' '.$model->getTitle();
 ?>
 
 <?php echo $this->renderPartial('_form', array('model'=>$model)); ?>

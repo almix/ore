@@ -23,29 +23,27 @@ $this->widget('CustomGridView', array(
 				'class'=>'center',
 			),
 		),
+
 		array(
-			'name' => 'active',
+			'name' => 'status',
 			'type' => 'raw',
 			'value' => 'Yii::app()->controller->returnStatusHtml($data, "comment-grid")',
 			'headerHtmlOptions' => array('class'=>'infopages_status_column'),
 			'filter' => false,
 			'sortable' => false,
 		),
+
 		array(
-			'name' => 'name',
+			'header' => tc('Sections'),
 			'type' => 'raw',
-			'value' => 'Comment::getUserEmailLink($data)',
-			//'filter' => true,
-			'sortable' => true
+			'value' => '$data->getLinkForSection()',
+		),
+		array(
+			'header' => Yii::t('module_comments', 'Name'),
+			'type' => 'raw',
+			'value' => '$data->getUser()',
 		),
 		'body',
-		array(
-			'name' => 'apartment_id',
-			'type' => 'raw',
-			'value' => 'CHtml::link($data->apartment->id, $data->apartment->getUrl())',
-			'filter' => false,
-			'sortable' => true
-		),
 		array(
 			'name' => 'date_created',
 			'headerHtmlOptions' => array('style' => 'width:130px;'),
@@ -82,7 +80,6 @@ $this->renderPartial('//site/admin-select-items', array(
 	'model' => $model,
 	'options' => array(
 		'activate' => Yii::t('common', 'Activate'),
-		'deactivate' => Yii::t('common', 'Deactivate'),
 		'delete' => Yii::t('common', 'Delete')
 	),
 ));

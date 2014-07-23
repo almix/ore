@@ -1,11 +1,12 @@
 <?php
-/**********************************************************************************************
+
+/* * ********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- *    version                :    1.5.1
- *    copyright            :    (c) 2013 Monoray
- *    website                :    http://www.monoray.ru/
- *    contact us            :    http://www.monoray.ru/contact
+ * 	version				:	1.8.2
+ * 	copyright			:	(c) 2014 Monoray
+ * 	website				:	http://www.monoray.ru/
+ * 	contact us			:	http://www.monoray.ru/contact
  *
  * This file is part of CMS Open Real Estate
  *
@@ -14,7 +15,7 @@
  *
  * Open Real Estate is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
  * Without even the implied warranty of  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- ***********************************************************************************************/
+ * ********************************************************************************************* */
 
 function setLang() {
 	if(isFree()){
@@ -137,23 +138,45 @@ function isActive($string) {
 function rrmdir($dir) {
 	if (is_dir($dir)) {
 		$objects = scandir($dir);
-		if ($objects) {
+		if ($objects && is_array($objects)) {
 			foreach ($objects as $object) {
 				if ($object != "." && $object != "..") {
 					if (filetype($dir . "/" . $object) == "dir") {
 						rrmdir($dir . "/" . $object);
 					} else {
-						unlink($dir . "/" . $object);
+						@unlink($dir . "/" . $object);
 					}
 				}
 			}
 		}
 		reset($objects);
-		rmdir($dir);
+		@rmdir($dir);
 	}
 }
 
-function issetModule($module) {
+class oreInstall {
+	static $isInstalled = null;
+	public static function isInstalled(){
+		if(self::$isInstalled === null){
+			self::$isInstalled = file_exists(ALREADY_INSTALL_FILE);
+		}
+		return self::$isInstalled;
+	}
+}
+
+function issetModule($module, $raw = false) {
+	if(!oreInstall::isInstalled()){
+		$raw = true;
+	}
+	if(!$raw){
+		$modules = ConfigurationModel::getModulesList();
+		if(in_array($module, $modules)){
+			if(!param('module_enabled_'.$module)){
+				return false;
+			}
+		}
+	}
+
 	if (is_array($module)) {
 		foreach ($module as $module_name) {
 			if (!isset(Yii::app()->modules[$module_name])) {
@@ -228,6 +251,14 @@ function getGA(){
 	}
 }
 
+function getJivo(){
+	if(demo() && defined('JIVO_CODE')){
+		return '<script type="text/javascript">'.JIVO_CODE.'</script>';
+	} else {
+		return '';
+	}
+}
+
 function isFree(){
 	if(defined('IS_FREE') && IS_FREE){
 		return true;
@@ -251,16 +282,18 @@ function formatBytes($size, $precision = 2) {
  */
 function newFolder($newdir, $rights=0777) {
 	$old_mask = umask(0);
-	if(!file_exists($newdir))
-	{
-		if(!mkdir($newdir, $rights, true))
+	if(!file_exists($newdir)){
+		if(!mkdir($newdir, $rights, true)){
+			umask($old_mask);
 			return false;
-		else
+		} else {
+			umask($old_mask);
 			return true;
-	}else
+		}
+	} else {
+		umask($old_mask);
 		return true;
-
-	umask($old_mask);
+	}
 }
 
 /**
@@ -269,13 +302,17 @@ function newFolder($newdir, $rights=0777) {
  * return void
  */
 function rmrf($dir) {
-	foreach (glob($dir) as $file)
-	{
-		if (is_dir($file)) {
-			rmrf("$file/*");
-			rmdir($file);
-		} else {
-			unlink($file);
+	$rmDirs = glob($dir);
+
+	if (is_array($rmDirs) && count($rmDirs)) {
+		foreach ($rmDirs as $file)
+		{
+			if (is_dir($file)) {
+				rmrf("$file/*");
+				rmdir($file);
+			} else {
+				@unlink($file);
+			}
 		}
 	}
 }
@@ -288,7 +325,7 @@ function rmrf($dir) {
 function deleteFile($dir, $file) {
 	$dfile = $dir.$file;
 	if(file_exists($dfile))
-		return unlink($dfile);
+		return @unlink($dfile);
 	return true;
 }
 

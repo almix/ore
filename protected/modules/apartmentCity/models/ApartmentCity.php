@@ -2,8 +2,8 @@
 /**********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- *	version				:	1.5.1
- *	copyright			:	(c) 2013 Monoray
+ *	version				:	1.8.2
+ *	copyright			:	(c) 2014 Monoray
  *	website				:	http://www.monoray.ru/
  *	contact us			:	http://www.monoray.ru/contact
  *
@@ -94,7 +94,10 @@ class ApartmentCity extends ParentModel
 
             $sql = 'SELECT ac.name_'.Yii::app()->language.' AS name, ac.id AS id
                     FROM {{apartment}} ap, {{apartment_city}} ac
-                    WHERE ac.id = ap.city_id AND ap.active = '.Apartment::STATUS_ACTIVE.' '.$ownerActiveCond.' ORDER BY ac.sorter';
+                    WHERE ac.id = ap.city_id
+                    AND ap.type IN ('.implode(',', Apartment::availableApTypesIds()).')
+                    AND ap.active = '.Apartment::STATUS_ACTIVE.' '.$ownerActiveCond.'
+                    ORDER BY ac.sorter';
 
             $results = Yii::app()->db->createCommand($sql)->queryAll();
 

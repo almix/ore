@@ -1,4 +1,13 @@
 <?php
+$this->pageTitle .= ' - '. tt('do_complain', 'apartmentsComplain');
+$this->breadcrumbs=array(
+	Yii::t('common', 'Apartment search') => array('/quicksearch/main/mainsearch'),
+	truncateText(CHtml::encode($modelApartment->getStrByLang('title')), 8) => $modelApartment->getUrl(),
+	tt('do_complain', 'apartmentsComplain'),
+);
+?>
+
+<?php
 if (!Yii::app()->user->isGuest) {
 	if (!$model->name) {
 		$model->name = Yii::app()->user->username;
@@ -23,7 +32,7 @@ if (!Yii::app()->user->isGuest) {
 
     <div class="row">
 		<?php echo $form->labelEx($model, 'complain_id'); ?>
-		<?php echo $form->dropDownList($model,'complain_id',ApartmentsComplainReason::getAllReasons(), array('class' => 'width300')); ?>
+		<?php echo $form->dropDownList($model,'complain_id', ApartmentsComplainReason::getAllReasons(), array('class' => 'width300')); ?>
 		<?php echo $form->error($model, 'complain_id'); ?>
     </div>
 
@@ -51,7 +60,7 @@ if (!Yii::app()->user->isGuest) {
 		<?php
 		$cAction = '/apartmentsComplain/main/captcha';
 		$this->widget('CCaptcha',
-			array('captchaAction' => $cAction, 'buttonOptions' => array('style' => 'display:block;'))
+			array('captchaAction' => $cAction, 'buttonOptions' => array('style' => 'display:block;'), 'imageOptions'=>array('id'=>'complain_captcha'))
 		);?>
         <br/>
 		<?php echo $form->textField($model, 'verifyCode', array('autocomplete' => 'off'));?><br/>

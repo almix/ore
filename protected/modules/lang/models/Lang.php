@@ -2,8 +2,8 @@
 /* * ********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- * 	version				:	1.5.1
- * 	copyright			: 	(c) 2013 Monoray
+ * 	version				:	1.8.2
+ * 	copyright			: 	(c) 2014 Monoray
  * 	website				: 	http://www.monoray.ru/
  * 	contact us			:	http://www.monoray.ru/contact
  *
@@ -37,6 +37,8 @@ class Lang extends ParentModel
     public $copy_lang_from;
 
 	const FLAG_DIR = '/images/flags/';
+
+	private static $apartmentIndexedFields = array('title', 'description', 'description_near', 'address');
 
     /**
      * Returns the static model of the specified AR class.
@@ -181,17 +183,16 @@ class Lang extends ParentModel
 		'TimesOut',
 		'ApartmentCity',
 		'ApartmentObjType',
+		'ApartmentsComplainReason',
 		'News',
 		'Menu',
 		'Article',
 		'TranslateMessage',
-		//'Seo',
 		'User',
-		//'PaidServices',
-		//'Paysystem',
-		//'Advert',
-		//'Slider',
-		//'SeoFriendlyUrl',
+		'FormDesigner',
+		'InfoPages',
+
+		// Images - for future multilang comments
 	);
 
 	public function init() {
@@ -218,14 +219,14 @@ class Lang extends ParentModel
 		parent::init();
 	}
 
-    public function addLang($lang)
-    {
+    public function addLang($lang) {
         $db = Yii::app()->db;
 
         Yii::import('application.modules.referencecategories.models.ReferenceCategories');
         Yii::import('application.modules.referencevalues.models.ReferenceValues');
         Yii::import('application.modules.windowto.models.WindowTo');
         Yii::import('application.modules.articles.models.Article');
+        Yii::import('application.modules.formdesigner.models.FormDesigner');
 
         // pass on models with the multilanguage fields
         foreach ($this->_modelNameI18nArr as $modelName) {
@@ -251,6 +252,22 @@ class Lang extends ParentModel
 						}
                         $db->createCommand($sql)->execute();
                     }
+
+					// add fulltext index
+					if ($modelName == 'Apartment' && is_numeric(array_search($field, self::$apartmentIndexedFields))) {
+						$addIndex = true;
+
+						$allIndexes = $db->createCommand('SHOW INDEX FROM '.$table)->queryAll();
+						if ($allIndexes) {
+							$resIndex = CHtml::listData($allIndexes, 'Key_name', 'Index_type');
+
+							if (array_key_exists($columnName, $resIndex))
+								$addIndex = false;
+						}
+
+						if ($addIndex)
+							$db->createCommand('ALTER TABLE '.$table.' ADD FULLTEXT ( '.$columnName.' );')->execute();
+					}
                 }
             }
         }
@@ -274,6 +291,8 @@ class Lang extends ParentModel
         Yii::import('application.modules.referencevalues.models.ReferenceValues');
         Yii::import('application.modules.windowto.models.WindowTo');
         Yii::import('application.modules.articles.models.Article');
+        Yii::import('application.modules.formdesigner.models.FormDesigner');
+
         foreach ($this->_modelNameI18nArr as $modelName) {
             $model = new $modelName;
             $table = $model->tableName();
@@ -288,6 +307,22 @@ class Lang extends ParentModel
                 if ($fieldExist) {
                     $sql = "ALTER TABLE {$table} DROP `$columnName` ";
                     $db->createCommand($sql)->execute();
+
+					// delete fulltext index
+					if ($modelName == 'Apartment' && is_numeric(array_search($field, self::$apartmentIndexedFields))) {
+						$deleteIndex = false;
+
+						$allIndexes = $db->createCommand('SHOW INDEX FROM '.$table)->queryAll();
+						if ($allIndexes) {
+							$resIndex = CHtml::listData($allIndexes, 'Key_name', 'Index_type');
+
+							if (array_key_exists($columnName, $resIndex))
+								$deleteIndex = true;
+						}
+
+						if ($deleteIndex)
+							$db->createCommand('ALTER TABLE '.$table.' DROP INDEX ( '.$columnName.' );')->execute();
+					}
                 }
             }
         }
@@ -334,9 +369,12 @@ class Lang extends ParentModel
 
     public static function getActiveLangs($full = false, $requery = false)
     {
+		if(!oreInstall::isInstalled()){
+			return array('ru', 'en', 'de');
+		}
 
         if (!isset(self::$_activeLangs) || $requery) {
-            $sql = "SELECT id, name_iso, flag_img, main, name_" . Yii::app()->language . " AS name, currency_id
+            $sql = "SELECT id, name_iso, flag_img, main, name_" . Yii::app()->language . " AS name, name_rfc3066, currency_id
                     FROM {{lang}}
                     WHERE active=1
                     ORDER BY sorter ASC";
@@ -348,6 +386,7 @@ class Lang extends ParentModel
                 self::$_activeLangs[$lang['name_iso']] = $lang['name_iso'];
                 self::$_activeLangsFull[$lang['name_iso']] = $lang;
                 self::$_activeLangsTranslated[$lang['name_iso']] = $lang['name'];
+				self::$_activeLangsTranslated[$lang['name_iso']] = $lang['name_rfc3066'];
 
                 if ($lang['main']) {
                     self::$_mainLang = $lang['name_iso'];

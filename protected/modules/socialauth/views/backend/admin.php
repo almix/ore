@@ -10,17 +10,20 @@ $this->adminTitle = tt('Manage social settings');
 
 
 $info = '';
-if (!SocialauthModel::getSocialParamValue('googleOauthClientId') && !SocialauthModel::getSocialParamValue('googleOauthClientSecret'))
+if (!SocialauthModel::getSocialParamValue('useGoogleOauth'))
 	$info .= Yii::t('module_socialauth', 'Go to link for register Google application - {link}', array('{link}' => CHtml::link('https://code.google.com/apis/console/', 'https://code.google.com/apis/console/', array('target' => '_blank')))).'<br />';
 
-if (!SocialauthModel::getSocialParamValue('twitterKey') && !SocialauthModel::getSocialParamValue('twitterSecret'))
+if (!SocialauthModel::getSocialParamValue('useTwitter'))
 	$info .= Yii::t('module_socialauth', 'Go to link for register Twitter application - {link}', array('{link}' => CHtml::link('https://dev.twitter.com/apps/new', 'https://dev.twitter.com/apps/new',  array('target' => '_blank')))).'<br />';
 
-if (!SocialauthModel::getSocialParamValue('facebookClientId') && !SocialauthModel::getSocialParamValue('facebookClientSecret'))
+if (!SocialauthModel::getSocialParamValue('useFacebook'))
 	$info .= Yii::t('module_socialauth', 'Go to link for register Facebook application - {link}', array('{link}' => CHtml::link('https://developers.facebook.com/apps/', 'https://developers.facebook.com/apps/',  array('target' => '_blank')))).'<br />';
 
-if (!SocialauthModel::getSocialParamValue('vkontakteClientId') && !SocialauthModel::getSocialParamValue('vkontakteClientSecret'))
+if (!SocialauthModel::getSocialParamValue('useVkontakte'))
 	$info .= Yii::t('module_socialauth', 'Go to link for register VK.com application - {link}', array('{link}' => CHtml::link('http://vk.com/editapp?act=create&site=1', 'http://vk.com/editapp?act=create&site=1',  array('target' => '_blank')))).'<br />';
+
+if (!SocialauthModel::getSocialParamValue('useMailruOAuth'))
+	$info .= Yii::t('module_socialauth', 'Go to link for register Mail.ru application - {link}', array('{link}' => CHtml::link('http://api.mail.ru/sites/my/add', 'http://api.mail.ru/sites/my/add',  array('target' => '_blank')))).'<br />';
 
 if ($info)
 	Yii::app()->user->setFlash('info', $info);

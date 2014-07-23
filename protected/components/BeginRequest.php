@@ -2,8 +2,8 @@
 /**********************************************************************************************
  *                            CMS Open Real Estate
  *                              -----------------
- *    version                :    1.5.1
- *    copyright            :    (c) 2013 Monoray
+ *    version                :    1.8.2
+ *    copyright            :    (c) 2014 Monoray
  *    website                :    http://www.monoray.ru/
  *    contact us            :    http://www.monoray.ru/contact
  *
@@ -21,13 +21,11 @@ class BeginRequest {
 	const TIME_UPDATE = 86400;
 
 	public static function updateStatusAd() {
-		if (Yii::app()->request->getIsAjaxRequest() || !issetModule('paidservices')) {
+		if (Yii::app()->request->getIsAjaxRequest())
 			return false;
-		}
 
-		if (!file_exists(ALREADY_INSTALL_FILE)) {
+		if (!oreInstall::isInstalled())
 			return false;
-		}
 
 		$data = Yii::app()->statePersister->load();
 
@@ -35,20 +33,28 @@ class BeginRequest {
 		if (isset($data['next_check_status'])) {
 			if ($data['next_check_status'] < time()) {
 				$data['next_check_status'] = time() + self::TIME_UPDATE;
-
-				self::checkStatusAd();
-
 				Yii::app()->statePersister->save($data);
 
-				// обновляем курсы валют
-				Currency::model()->parseCbr();
+				if (issetModule('paidservices')) {
+					self::checkStatusAd();
+					// обновляем курсы валют
+					Currency::model()->parseCbr();
+				}
+
+				self::clearApartmentsStats();
+				self::checkDateEndActivity();
 			}
-		} else {
+		}
+		else {
 			$data['next_check_status'] = time() + self::TIME_UPDATE;
-
-			self::checkStatusAd();
-
 			Yii::app()->statePersister->save($data);
+
+			if (issetModule('paidservices')) {
+				self::checkStatusAd();
+			}
+
+			self::clearApartmentsStats();
+			self::checkDateEndActivity();
 		}
 	}
 
@@ -56,7 +62,6 @@ class BeginRequest {
 		$activePaids = ApartmentPaid::model()->findAll('date_end <= NOW() AND status=' . ApartmentPaid::STATUS_ACTIVE);
 
 		foreach ($activePaids as $paid) {
-
 			$paid->status = ApartmentPaid::STATUS_NO_ACTIVE;
 
 			if ($paid->paid_id == PaidServices::ID_SPECIAL_OFFER || $paid->paid_id == PaidServices::ID_UP_IN_SEARCH) {
@@ -80,6 +85,25 @@ class BeginRequest {
 			if (!$paid->update(array('status'))) {
 				//deb($paid->getErrors());
 			}
+		}
+	}
+
+	public static function clearApartmentsStats(){
+		$sql = 'DELETE FROM {{apartment_statistics}} WHERE date_created < (NOW() - INTERVAL 2 DAY)';
+		Yii::app()->db->createCommand($sql)->execute();
+	}
+
+	public static function checkDateEndActivity () {
+		$adEndActivity = Apartment::model()->with('user')->findAll('t.date_end_activity <= NOW() AND t.activity_always != 1 AND (t.active=:status OR t.owner_active=:status)', array(':status' => Apartment::STATUS_ACTIVE));
+		foreach($adEndActivity as $ad){
+			$ad->scenario = 'update_status';
+			if(isset($ad->user) && $ad->user->isAdmin == 1){
+				$ad->active = Apartment::STATUS_INACTIVE;
+			} else {
+				$ad->active = Apartment::STATUS_INACTIVE;
+				$ad->owner_active = Apartment::STATUS_INACTIVE;
+			}
+			$ad->save(false);
 		}
 	}
 }

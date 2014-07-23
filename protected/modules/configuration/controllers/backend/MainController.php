@@ -1,6 +1,6 @@
 <?php
 /**********************************************************************************************
-*	copyright			:	(c) 2013 Monoray
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 ***********************************************************************************************/
@@ -56,13 +56,14 @@ class MainController extends ModuleAdminController {
 
         $model = ConfigurationModel::model()->findByPk($id);
 
-		if(!$val && !in_array($model->name, ConfigurationModel::model()->allowEmpty)) {
+		if(!$val && $val!=='0' && !$model->allowEmpty) {
 			Yii::app()->user->setFlash('error', tt('Enter the required value'));
 			echo 'error_save';
 			Yii::app()->end();
 		}
 
         $model->value = $val;
+
         if($model->save()){
             echo 'ok';
         } else {
@@ -79,9 +80,50 @@ class MainController extends ModuleAdminController {
             $model = $this->loadModel($id);
 
             if($model){
+				if (
+					$model->name == 'useTypeRent' || $model->name == 'useTypeSale' ||
+					$model->name == 'useTypeRenting' || $model->name == 'useTypeBuy' ||
+					$model->name == 'useTypeChange'
+				) {
+					if (count(Apartment::availableApTypesIds()) == 1 && $action == 'deactivate') {
+						if(!Yii::app()->request->isAjaxRequest){
+							$this->redirect(isset($_POST['returnUrl']) ? $_POST['returnUrl'] : array('admin'));
+						}
+						Yii::app()->end;
+					}
+				}
+
                 $model->value = ($action == 'activate' ? 1 : 0);
                 $model->update(array('value'));
-            }
+
+				if($model->name == 'useGoogleMap' && $model->value == 1){
+					$modelToggle = ConfigurationModel::model()->findAllByAttributes(array('name' => array('useYandexMap', 'useOSMMap')));
+					if ($modelToggle) {
+						foreach($modelToggle as $mToggle) {
+							$mToggle->value = 0;
+							$mToggle->update(array('value'));
+						}
+					}
+				}
+				if($model->name == 'useYandexMap' && $model->value == 1){
+					$modelToggle = ConfigurationModel::model()->findAllByAttributes(array('name' => array('useGoogleMap', 'useOSMMap')));
+					if ($modelToggle) {
+						foreach($modelToggle as $mToggle) {
+							$mToggle->value = 0;
+							$mToggle->update(array('value'));
+						}
+					}
+				}
+				if($model->name == 'useOSMMap' && $model->value == 1){
+					$modelToggle = ConfigurationModel::model()->findAllByAttributes(array('name' => array('useYandexMap', 'useGoogleMap')));
+					if ($modelToggle) {
+						foreach($modelToggle as $mToggle) {
+							$mToggle->value = 0;
+							$mToggle->update(array('value'));
+						}
+					}
+				}
+			}
         }
         if(!Yii::app()->request->isAjaxRequest){
             $this->redirect(isset($_POST['returnUrl']) ? $_POST['returnUrl'] : array('admin'));

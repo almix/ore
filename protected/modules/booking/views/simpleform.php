@@ -8,7 +8,7 @@ $this->pageTitle = tt('Booking apartment');
 
 <?php if(!Yii::app()->user->hasFlash('success')): ?>
 
-<div class="form min-fancy-width">
+<div class="form min-fancy-width max-fancy-width">
 	<?php $form=$this->beginWidget('CActiveForm', array(
 		'action' => Yii::app()->controller->createUrl('/booking/main/mainform'),
 		'enableAjaxValidation'=>false,

@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -30,9 +30,15 @@ class MainController extends ModuleAdminController {
 			),
 		);
 
+		$model = $this->loadModelWith(array('windowTo', 'objType', 'city'));
+
+		if (!in_array($model->type, Apartment::availableApTypesIds())) {
+			throw404();
+		}
+
 		$this->render('view', array(
-			'model' =>  $this->loadModelWith(array('windowTo', 'objType', 'city')),
-			'statistics' => Apartment::getApartmentVisitCount($id),
+			'model' => $model,
+			'statistics' => Apartment::getApartmentVisitCount($model),
 		));
 	}
 
@@ -46,7 +52,6 @@ class MainController extends ModuleAdminController {
 
 		$this->rememberPage();
 
-
 		$this->getMaxSorter();
 
 		$model = new Apartment('search');
@@ -58,13 +63,16 @@ class MainController extends ModuleAdminController {
     }
 
 	public function actionUpdate($id){
-
         $this->_model = $this->loadModel($id);
-		if(!$this->_model){
-			throw404();
-		}
 
-		if(issetModule('bookingcalendar')) {
+
+        if(!$this->_model){
+            throw404();
+        }
+
+        $oldStatus = $this->_model->active;
+
+        if(issetModule('bookingcalendar')) {
 			$this->_model = $this->_model->with(array('bookingCalendar'));
 		}
         if(isset($_GET['type'])){
@@ -73,16 +81,12 @@ class MainController extends ModuleAdminController {
             $this->_model->type = $type;
         }
 
-        $categories = Apartment::getCategories($this->_model->id, $this->_model->type);
-
-		$originalActive = $this->_model->active;
-
 		if(isset($_POST[$this->modelName])){
-			$this->_model->attributes=$_POST[$this->modelName];
+			$this->_model->attributes = $_POST[$this->modelName];
 
 			if ($this->_model->type != Apartment::TYPE_BUY && $this->_model->type != Apartment::TYPE_RENTING) {
 				// video
-				$firstValidate = true;
+				$videoFileValidate = true;
 				if((isset($_FILES[$this->modelName]['name']['video_file']) && $_FILES[$this->modelName]['name']['video_file'])){
 					$this->_model->scenario = 'video_file';
 					if ($this->_model->validate()) {
@@ -103,20 +107,34 @@ class MainController extends ModuleAdminController {
 						}
 					}
 					else {
-						$firstValidate = false;
+						$videoFileValidate = false;
 					}
 				}
-				// html code
-				if (isset($_POST[$this->modelName]['video_html']) && $_POST[$this->modelName]['video_html']) {
-					$this->_model->video_html = $_POST[$this->modelName]['video_html'];
-					$this->_model->scenario = 'video_html';
-					if ($this->_model->validate()) {
-						$sql = 'INSERT INTO {{apartment_video}} (apartment_id, video_file, 	video_html, date_updated)
-							VALUES ("'.$id.'", "", "'.CHtml::encode($this->_model->video_html).'", NOW())';
-						Yii::app()->db->createCommand($sql)->execute();
+
+				if ($videoFileValidate) {
+					// html code
+					$videoHtmlValidate = true;
+					if (isset($_POST[$this->modelName]['video_html']) && $_POST[$this->modelName]['video_html']) {
+						$this->_model->video_html = $_POST[$this->modelName]['video_html'];
+						$this->_model->scenario = 'video_html';
+						if ($this->_model->validate()) {
+							$sql = 'INSERT INTO {{apartment_video}} (apartment_id, video_file, 	video_html, date_updated)
+								VALUES ("'.$id.'", "", "'.CHtml::encode($this->_model->video_html).'", NOW())';
+							Yii::app()->db->createCommand($sql)->execute();
+						}
+						else {
+							$videoHtmlValidate = false;
+						}
 					}
-					else {
-						$firstValidate = false;
+				}
+
+				if ($videoFileValidate && $videoHtmlValidate) {
+					$panoramaValidate = true;
+					$this->_model->panoramaFile = CUploadedFile::getInstance($this->_model, 'panoramaFile');
+
+					$this->_model->scenario = 'panorama';
+					if(!$this->_model->validate()) {
+						$panoramaValidate = false;
 					}
 				}
 
@@ -129,8 +147,8 @@ class MainController extends ModuleAdminController {
 					$city = $this->_model->city ? $this->_model->city->getStrByLang('name') : "";
 
 				// data
-				if ($firstValidate) {
-					if(($this->_model->address && $city) && (param('useGoogleMap', 1) || param('useYandexMap', 1))){
+				if ($videoFileValidate && $videoHtmlValidate && $panoramaValidate) {
+					if(($this->_model->address && $city) && (param('useGoogleMap', 1) || param('useYandexMap', 1) || param('useOSMMap', 1))){
 						if (!$this->_model->lat && !$this->_model->lng) { # уже есть
 
 							$coords = Geocoding::getCoordsByAddress($this->_model->address, $city);
@@ -146,23 +164,23 @@ class MainController extends ModuleAdminController {
 
 			$this->_model->scenario = 'savecat';
 
-            $isUpdate = Yii::app()->request->getPost('is_update');
-            if($isUpdate){
-                $this->_model->save(false);
-            }elseif($this->_model->validate()){
-				$this->_model->active = Apartment::STATUS_ACTIVE;
-				$this->_model->save(false);
+			$isUpdate = Yii::app()->request->getPost('is_update');
 
+			if($isUpdate){
+				$this->_model->active = $oldStatus;
+				$this->_model->save(false);
+			} elseif($this->_model->validate()) {
+				$this->_model->save(false);
 				$this->redirect(array('view','id'=>$this->_model->id));
 			}
-			$this->_model->active = $originalActive;
 		}
 
-		if($this->_model->active == Apartment::STATUS_DRAFT){
+        $this->_model->getCategoriesForUpdate();
+
+        if($this->_model->active == Apartment::STATUS_DRAFT){
 			Yii::app()->user->setState('menu_active', 'apartments.create');
 			$this->render('create', array(
 				'model' => $this->_model,
-				'categories' => $categories,
 				'supportvideoext' => ApartmentVideo::model()->supportExt,
 				'supportvideomaxsize' => ApartmentVideo::model()->fileMaxSize,
 			));
@@ -171,7 +189,6 @@ class MainController extends ModuleAdminController {
 
 		$this->render('update', array(
 			'model' => $this->_model,
-			'categories' => $categories,
 			'supportvideoext' => ApartmentVideo::model()->supportExt,
 			'supportvideomaxsize' => ApartmentVideo::model()->fileMaxSize,
 		));
@@ -189,7 +206,7 @@ class MainController extends ModuleAdminController {
 	public function actionCreate(){
 		$model = new $this->modelName;
 		$model->active = Apartment::STATUS_DRAFT;
-		$model->type = Apartment::TYPE_RENT;
+        $model->setDefaultType();
 		$model->save(false);
 
 		$this->redirect(array('update', 'id' => $model->id));
@@ -209,12 +226,12 @@ class MainController extends ModuleAdminController {
 	}
 
 	public function actionSavecoords($id){
-		if(param('useGoogleMap', 1) || param('useYandexMap', 1)){
+		if(param('useGoogleMap', 1) || param('useYandexMap', 1) || param('useOSMMap', 1)){
 			$apartment = $this->loadModel($id);
 			if(isset($_POST['lat']) && isset($_POST['lng'])){
-				$apartment->lat = $_POST['lat'];
-				$apartment->lng = $_POST['lng'];
-				$apartment->save(false);
+				$apartment->lat = floatval($_POST['lat']);
+				$apartment->lng = floatval($_POST['lng']);
+				$apartment->update(array('lat', 'lng'));
 			}
 			Yii::app()->end();
 		}
@@ -224,7 +241,7 @@ class MainController extends ModuleAdminController {
 		if($model === null){
 			$model = $this->loadModel($id);
 		}
-		$result = CustomGMap::actionGmap($id, $model, $this->renderPartial('_marker', array('model' => $model), true));
+		$result = CustomGMap::actionGmap($id, $model, $this->renderPartial('_marker', array('model' => $model), true), true);
 
 		if($result){
 			return $this->renderPartial('_gmap', $result, true);
@@ -242,6 +259,18 @@ class MainController extends ModuleAdminController {
 
 		if($result){
 			//return $this->renderPartial('backend/_ymap', $result, true);
+		}
+		return '';
+	}
+
+	public function actionOSmap($id, $model = null){
+		if($model === null){
+			$model = $this->loadModel($id);
+		}
+		$result = CustomOSMap::actionOSmap($id, $model, $this->renderPartial('_marker', array('model' => $model), true));
+
+		if($result){
+			return $this->renderPartial('_osmap', $result, true);
 		}
 		return '';
 	}

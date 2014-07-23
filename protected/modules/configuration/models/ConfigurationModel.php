@@ -1,13 +1,11 @@
 <?php
 /**********************************************************************************************
-*	copyright			:	(c) 2013 Monoray
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 ***********************************************************************************************/
 
 class ConfigurationModel extends ParentModel {
-	public $allowEmpty = array('adminPhone', 'adminSkype', 'adminICQ', 'adminAddress', 'mailSMTPLogin', 'mailSMTPPass', 'urlExtension', 'priceThousandsSeparator', 'priceDecimalsPoint');
-
 	public static function model($className=__CLASS__) {
 		return parent::model($className);
 	}
@@ -35,7 +33,7 @@ class ConfigurationModel extends ParentModel {
 	}
 
 	public function settingsValidator() {
-		if (!in_array($this->name, $this->allowEmpty) && empty($this->value)) {
+		if (!$this->allowEmpty && !$this->value && $this->value!=="0") {
 			$this->addError('value', tt('Fill a field'));
 		}
 	}
@@ -69,7 +67,7 @@ class ConfigurationModel extends ParentModel {
 				'defaultOrder' => 'section',
 			),
 			'pagination' => array(
-				'pageSize' => param('adminPaginationPageSize', 20),
+				'pageSize' => param('adminPaginationPageSizeBig', 60),
 			),
 		));
 	}
@@ -97,13 +95,16 @@ class ConfigurationModel extends ParentModel {
             );
 
             return '<div align="left">'.CHtml::link($img, $url, $options).'</div>';
+        } elseif($model->type == 'enum') {
+            $list = self::getEnumListForKey($model->name);
+            return isset($list[$model->value]) ? $list[$model->value] : utf8_substr($model->value, 0, 55);
         } else {
             return utf8_substr($model->value, 0, 55);
         }
     }
 
     public static function getVisible($type){
-        return $type == 'text';
+        return $type == 'text' || $type == 'enum';
     }
 
 	public static function updateValue($key, $value){
@@ -115,4 +116,53 @@ class ConfigurationModel extends ParentModel {
 
 		Configuration::clearCache();
 	}
+
+    public static function getEnumListForKey($key){
+        $list = array(
+            'apartment_periodActivityDefault' => Apartment::getPeriodActivityList(),
+            'mode_list_show' => Apartment::getModeShowList(),
+        );
+
+        return isset($list[$key]) ? $list[$key] : array();
+    }
+
+	public static function getModulesList(){
+		return CMap::mergeArray(self::getFreeModules(), self::getProModules());
+	}
+
+	public static function getFreeModules(){
+		return array(
+			'apartmentsComplain',
+			'similarads',
+			'socialauth',
+			'comparisonList',
+			'rss',
+		);
+	}
+
+	public static function getProModules(){
+		return array(
+			'seo',
+			'sitemap',
+			'socialposting',
+			'iecsv',
+			'location',
+			'yandexRealty',
+			'slider',
+			'advertising',
+			'bookingcalendar',
+			'formeditor',
+		);
+	}
+
+	public static function createValue($name, $value, $type = 'hidden', $section = 'main'){
+		$model = new self;
+		$model->type = $type;
+		$model->section = $section;
+		$model->name = $name;
+		$model->value = $value;
+		$model->date_updated = new CDbExpression('NOW()');
+		$model->save(false);
+	}
+
 }

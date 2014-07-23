@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -21,14 +21,24 @@ class ApartmentsWidget extends CWidget {
 	public $criteria = null;
 	public $count = null;
 	public $widgetTitle = null;
+	public $breadcrumbs = null;
 
 	public function getViewPath($checkTheme=false){
+		if($checkTheme && ($theme=Yii::app()->getTheme())!==null){
+			return $theme->getViewPath().DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR.'apartments';
+		}
 		return Yii::getPathOfAlias('application.modules.apartments.views');
 	}
 
 	public function run() {
 		Yii::import('application.modules.apartments.helpers.apartmentsHelper');
 		$result = apartmentsHelper::getApartments(param('countListitng'.User::getModeListShow(), 10), $this->usePagination, 0, $this->criteria);
+
+		if (!$this->breadcrumbs) {
+			$this->breadcrumbs=array(
+				Yii::t('common', 'Apartment search'),
+			);
+		}
 
 		if($this->count){
 			$result['count'] = $this->count;

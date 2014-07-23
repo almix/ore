@@ -53,13 +53,18 @@
 		<?php echo $form->labelEx($model,'date_start'); ?>
 
 		<?php
-
 		if(!$model->date_start){
-			//$model->date_start = Yii::app()->dateFormatter->format($dateFormat, time());
-			$model->date_start = Yii::app()->dateFormatter->formatDateTime(time(), 'medium', null);
-			if(Yii::app()->language == 'en'){
-				$model->date_start = date('m/d/Y');
-			}
+            if(issetModule('bookingcalendar') && isset($apartment) && $apartment){
+                $time = Bookingcalendar::getFirstFreeDay($apartment->id);
+            } else {
+                $time = time();
+            }
+
+			if(Yii::app()->language != 'ru'){
+				$model->date_start = date('m/d/Y', $time);
+			} else {
+                $model->date_start = Yii::app()->dateFormatter->formatDateTime($time, 'medium', null);
+            }
 		}
 		if (!$isSimpleForm && $useBookingCalendar) {
 			$this->widget('application.modules.bookingcalendar.extensions.FFJuiDatePicker', array(
@@ -150,3 +155,18 @@
 	<?php echo $form->textArea($model,'comment',array('class'=>'width500', 'rows' => '3')); ?>
 	<?php echo $form->error($model,'comment'); ?>
 </div>
+
+
+<?php if (Yii::app()->user->isGuest) : ?>
+	<div class="row">
+		<?php echo $form->labelEx($model, 'verifyCode');?>
+		<?php
+		$cAction = '/booking/main/captcha';
+		$this->widget('CCaptcha',
+			array('captchaAction' => $cAction, 'buttonOptions' => array('style' => 'display:block;'), 'imageOptions'=>array('id'=>'booking_captcha'))
+		);?>
+		<br/>
+		<?php echo $form->textField($model, 'verifyCode', array('autocomplete' => 'off'));?><br/>
+		<?php echo $form->error($model, 'verifyCode');?>
+	</div>
+<?php endif; ?>

@@ -2,7 +2,7 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
+*	version				:	1.8.2
 *	copyright			:	(c) 2012 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
@@ -53,51 +53,24 @@ class MainController extends ModuleAdminController{
         }
     }
 
-    public function actionSetup($id = 0) {
-        $id = $id ? $id : (isset($_POST['id']) ? $_POST['id'] : 0);
+    public function actionUpdate($id){
+        $model = $this->loadModel($id);
 
-        /** @var FormDesigner $model */
-        $model = FormDesigner::model()->findByPk($id);
+        $this->performAjaxValidation($model);
 
-        $request = Yii::app()->request;
-
-        $data = $request->getPost('FormDesigner');
-
-        if($data){
-
-			if(isset($data['objTypes'])){
-				$model->saveObjTypes = $data['objTypes'];
-			} else {
-				$model->saveObjTypes = array();
-			}
+        if(isset($_POST[$this->modelName])){
+            $model->attributes=$_POST[$this->modelName];
 
             $model->scenario = 'save_types';
 
             if($model->save()){
-                echo CJSON::encode(array(
-                    'status' => 'ok',
-                    'id' => $model->id,
-                    'html' => $model->getTypesHtml()
-                ));
-                Yii::app()->end();
-            } else {
-                echo CJSON::encode(array(
-                    'status' => 'err',
-                    'html' => $this->renderPartial('_setup_form', array(
-                        'id' => $model->id,
-                        'model' => $model,
-                    ), true)
-                ));
-                Yii::app()->end();
+                $this->redirect(array('admin'));
             }
         }
 
-        $data['model'] = $model;
-
-        if(Yii::app()->request->isAjaxRequest){
-            $this->renderPartial('setup', $data);
-        }else{
-            $this->render('setup', $data);
-        }
+        $this->render('_setup_form',
+            array('model'=>$model)
+        );
     }
+
 }

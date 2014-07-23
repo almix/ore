@@ -17,7 +17,8 @@ $this->widget('CustomGridView', array(
 		array(
 			'header' => tc('Status'),
 			'type' => 'raw',
-			'value' => 'Yii::app()->controller->returnStatusHtml($data, "langs-grid", 0, array(Lang::getDefaultLangId(), Lang::getAdminMailLangId()))',
+			'value' => 'Yii::app()->controller->returnStatusHtml($data, "langs-grid", 0,
+				$data->active ? array(Lang::getDefaultLangId(), Lang::getAdminMailLangId()) : !$data->currency->active)',
 			'headerHtmlOptions' => array(
 				'class'=>'apartments_status_column',
 			),

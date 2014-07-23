@@ -43,7 +43,7 @@
 			', CClientScript::POS_READY);
 		?>
 		<div id="homeintro">
-            <?php Yii::app()->controller->renderPartial('//site/index-search-form'); ?>
+            <?php Yii::app()->controller->renderPartial('//site/index-search'); ?>
 		</div>
 	</div>
 
@@ -64,6 +64,5 @@
 			?>
 			<?php echo $content; ?>
 		</div>
-
 	</div>
 <?php $this->endContent(); ?>

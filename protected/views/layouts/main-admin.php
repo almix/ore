@@ -2,19 +2,20 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <meta name="language" content="en"/>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+	<meta name="language" content="en"/>
 
-    <title><?php echo CHtml::encode($this->pageTitle); ?></title>
-    <meta name="description" content="<?php echo CHtml::encode($this->pageDescription); ?>"/>
-    <meta name="keywords" content="<?php echo CHtml::encode($this->pageKeywords); ?>"/>
+	<title><?php echo CHtml::encode($this->pageTitle); ?></title>
+	<meta name="description" content="<?php echo CHtml::encode($this->pageDescription); ?>"/>
+	<meta name="keywords" content="<?php echo CHtml::encode($this->pageKeywords); ?>"/>
+	<link href='http://fonts.googleapis.com/css?family=Roboto:400,300,700,500&subset=latin,cyrillic-ext,greek-ext,greek,vietnamese,latin-ext,cyrillic' rel='stylesheet' type='text/css'>
 
-    <link media="screen, projection" type="text/css" href="<?php echo $baseUrl; ?>/css/admin-styles.css" rel="stylesheet"/>
+	<link media="screen, projection" type="text/css" href="<?php echo $baseUrl; ?>/css/admin-styles.css" rel="stylesheet"/>
 
-    <!--[if IE]>
+	<!--[if IE]>
 	<link href="<?php echo $baseUrl; ?>/css/ie.css" rel="stylesheet" type="text/css"> <![endif]-->
-    <link rel="icon" href="<?php echo $baseUrl; ?>/favicon.ico" type="image/x-icon"/>
-    <link rel="shortcut icon" href="<?php echo $baseUrl; ?>/favicon.ico" type="image/x-icon"/>
+	<link rel="icon" href="<?php echo $baseUrl; ?>/favicon.ico" type="image/x-icon"/>
+	<link rel="shortcut icon" href="<?php echo $baseUrl; ?>/favicon.ico" type="image/x-icon"/>
 
 	<?php
 		Yii::app()->bootstrap->registerAllCss();
@@ -24,12 +25,24 @@
 			Yii::app()->getClientScript()->registerScriptFile(
 				'http://api-maps.yandex.ru/2.0/?load=package.standard,package.clusters&coordorder=longlat&lang=' . CustomYMap::getLangForMap(),
 				CClientScript::POS_END);
-		} else {
-			if(param('useGoogleMap') == 1) {
-				Yii::app()->getClientScript()->registerScriptFile('https://maps.google.com/maps/api/js??v=3.5&sensor=false&language='.Yii::app()->language.'', CClientScript::POS_END);
-				Yii::app()->getClientScript()->registerScriptFile('http://google-maps-utility-library-v3.googlecode.com/svn/trunk/markerclusterer/src/markerclusterer.js', CClientScript::POS_END);
-			}
 		}
+		elseif(param('useGoogleMap') == 1) {
+			//Yii::app()->getClientScript()->registerScriptFile('https://maps.google.com/maps/api/js??v=3.5&sensor=false&language='.Yii::app()->language.'', CClientScript::POS_END);
+			//Yii::app()->getClientScript()->registerScriptFile('http://google-maps-utility-library-v3.googlecode.com/svn/trunk/markerclusterer/src/markerclusterer.js', CClientScript::POS_END);
+		}
+		elseif(param('useOSMMap') == 1) {
+			//Yii::app()->clientScript->registerScriptFile('http://cdn.leafletjs.com/leaflet-0.7/leaflet.js', CClientScript::POS_END);
+			//Yii::app()->clientScript->registerCssFile('http://cdn.leafletjs.com/leaflet-0.7/leaflet.css');
+
+			Yii::app()->clientScript->registerScriptFile(Yii::app()->request->baseUrl . '/js/leaflet/leaflet-0.7.2/leaflet.js', CClientScript::POS_HEAD);
+			Yii::app()->clientScript->registerCssFile(Yii::app()->request->baseUrl . '/js/leaflet/leaflet-0.7.2/leaflet.css');
+
+			Yii::app()->clientScript->registerScriptFile(Yii::app()->request->baseUrl . '/js/leaflet/leaflet-0.7.2/dist/leaflet.markercluster-src.js', CClientScript::POS_HEAD);
+			Yii::app()->clientScript->registerCssFile(Yii::app()->request->baseUrl . '/js/leaflet/leaflet-0.7.2/dist/MarkerCluster.css');
+			Yii::app()->clientScript->registerCssFile(Yii::app()->request->baseUrl . '/js/leaflet/leaflet-0.7.2/dist/MarkerCluster.Default.css');
+		}
+
+    $this->renderPartial('//layouts/_common');
 	?>
 </head>
 
@@ -88,6 +101,15 @@
 
 	$countComplainPending = ApartmentsComplain::getCountPending();
 	$bageComplain = ($countComplainPending > 0) ? "&nbsp<span class=\"badge\">{$countComplainPending}</span>" : '';
+
+	$countReviewsPending = Reviews::getCountModeration();
+	$bageReviews = ($countReviewsPending > 0) ? "&nbsp<span class=\"badge\">{$countReviewsPending}</span>" : '';
+
+	$bageBooking = '';
+	if (issetModule('bookingtable')) {
+		$countNewPending = Bookingtable::getCountNew();
+		$bageBooking = ($countNewPending > 0) ? "&nbsp<span class=\"badge\">{$countNewPending}</span>" : '';
+	}
 ?>
 
 <div class="bootnavbar-delimiter"></div>
@@ -106,17 +128,22 @@
 							array('label' => tc('Listings') . $bageListings, 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/apartments/backend/main/admin', 'active' => isActive('apartments')),
 							array('label' => tc('List your property'), 'icon' => 'icon-plus-sign', 'url' => $baseUrl . '/apartments/backend/main/create', 'active' => isActive('apartments.create')),
 							array('label' => tc('Comments') . $bageComments, 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/comments/backend/main/admin', 'active' => isActive('comments')),
-							array('label' => tc('Complains') . $bageComplain, 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/apartmentsComplain/backend/main/admin', 'active' => isActive('apartmentsComplain')),
+							array('label' => tc('Complains') . $bageComplain, 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/apartmentsComplain/backend/main/admin', 'active' => isActive('apartmentsComplain'), 'visible' => issetModule('apartmentsComplain')),
+							array('label' => tt('Booking apartment', 'booking') . $bageBooking, 'icon' => 'icon-file', 'url' => $baseUrl . '/bookingtable/backend/main/admin', 'active' => isActive('bookingtable'), 'visible' => issetModule('bookingtable')),
 
 							array('label' => tc('Users')),
 							array('label' => tc('Users'), 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/users/backend/main/admin', 'active' => isActive('users')),
 							//array('label' => tt('Add user', 'users'), 'icon' => 'icon-plus-sign', 'url' => $baseUrl . '/users/backend/main/create', 'active' => isActive('users.create')),
 
+							array('label' => tt('Reviews', 'reviews')),
+							array('label' => tt('Reviews_management', 'reviews') . $bageReviews, 'icon' => 'icon-file', 'url' => $baseUrl . '/reviews/backend/main/admin', 'active' => isActive('reviews')),
+							array('label' => tt('Add_feedback', 'reviews'), 'icon' => 'icon-plus-sign', 'url' => $baseUrl . '/reviews/backend/main/create', 'active' => isActive('reviews.create')),
 
 							array('label' => tc('Content')),
 							array('label' => tc('News'), 'icon' => 'icon-file', 'url' => $baseUrl . '/news/backend/main/admin', 'active' => isActive('news')),
-							array('label' => tc('Top menu items'), 'icon' => 'icon-file', 'url' => $baseUrl . '/menumanager/backend/main/admin', 'active' => isActive('menumanager')),
 							array('label' => tc('Q&As'), 'icon' => 'icon-file', 'url' => $baseUrl . '/articles/backend/main/admin', 'active' => isActive('articles')),
+							array('label' => tc('Top menu items'), 'icon' => 'icon-file', 'url' => $baseUrl . '/menumanager/backend/main/admin', 'active' => isActive('menumanager')),
+							array('label' => tc('Info pages'), 'icon' => 'icon-file', 'url' => $baseUrl . '/infopages/backend/main/admin', 'active' => isActive('infopages')),
 
 							array('label' => tc('References')),
 							array('label' => tc('Categories of references'), 'icon' => 'icon-asterisk', 'url' => $baseUrl . '/referencecategories/backend/main/admin', 'active' => isActive('referencecategories')),
@@ -129,6 +156,7 @@
 
 							array('label' => tc('Settings')),
 							array('label' => tc('Settings'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/configuration/backend/main/admin', 'active' => isActive('configuration')),
+							array('label' => tc('Manage modules'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/modules/backend/main/admin', 'active' => isActive('modules')),
 							array('label' => tc('Images'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/images/backend/main/index', 'active' => isActive('images')),
 							array('label' => tc('Change admin password'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/adminpass/backend/main/index', 'active' => isActive('adminpass')),
 							array('label' => tc('Site service '), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/service/backend/main/admin', 'active' => isActive('service'), 'visible' => issetModule('service')),
@@ -157,19 +185,24 @@
 							array('label' => tc('Listings') . $bageListings, 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/apartments/backend/main/admin', 'active' => isActive('apartments')),
 							array('label' => tc('List your property'), 'icon' => 'icon-plus-sign', 'url' => $baseUrl . '/apartments/backend/main/create', 'active' => isActive('apartments.create')),
 							array('label' => tc('Comments') . $bageComments, 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/comments/backend/main/admin', 'active' => isActive('comments')),
-							array('label' => tc('Complains') . $bageComplain, 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/apartmentsComplain/backend/main/admin', 'active' => isActive('apartmentsComplain')),
+							array('label' => tc('Complains') . $bageComplain, 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/apartmentsComplain/backend/main/admin', 'active' => isActive('apartmentsComplain'), 'visible' => issetModule('apartmentsComplain')),
+                            array('label' => tt('Booking apartment', 'booking') . $bageBooking, 'icon' => 'icon-file', 'url' => $baseUrl . '/bookingtable/backend/main/admin', 'active' => isActive('bookingtable'), 'visible' => issetModule('bookingtable')),
 
 							array('label' => tc('Users')),
 							array('label' => tc('Users'), 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/users/backend/main/admin', 'active' => isActive('users')),
 							//array('label' => tt('Add user', 'users'), 'icon' => 'icon-plus-sign', 'url' => $baseUrl . '/users/backend/main/create', 'active' => isActive('users.create')),
 
+							array('label' => tt('Reviews', 'reviews')),
+							array('label' => tt('Reviews_management', 'reviews') . $bageReviews, 'icon' => 'icon-list-alt', 'url' => $baseUrl . '/reviews/backend/main/admin', 'active' => isActive('reviews')),
+							array('label' => tt('Add_feedback', 'reviews'), 'icon' => 'icon-plus-sign', 'url' => $baseUrl . '/reviews/backend/main/create', 'active' => isActive('reviews.create')),
 
 							array('label' => tc('Content')),
 							array('label' => tc('News'), 'icon' => 'icon-file', 'url' => $baseUrl . '/news/backend/main/admin', 'active' => isActive('news')),
-							array('label' => tc('Top menu items'), 'icon' => 'icon-file', 'url' => $baseUrl . '/menumanager/backend/main/admin', 'active' => isActive('menumanager')),
 							array('label' => tc('Q&As'), 'icon' => 'icon-file', 'url' => $baseUrl . '/articles/backend/main/admin', 'active' => isActive('articles')),
+							array('label' => tc('Top menu items'), 'icon' => 'icon-file', 'url' => $baseUrl . '/menumanager/backend/main/admin', 'active' => isActive('menumanager')),
+							array('label' => tc('Info pages'), 'icon' => 'icon-file', 'url' => $baseUrl . '/infopages/backend/main/admin', 'active' => isActive('infopages')),
 
-							array('label' => tc('MODULE of Payments & Payment systems '), 'visible' => issetModule('payment')),
+							array('label' => tc('Payments'), 'visible' => issetModule('payment')),
 							array('label' => tc('Paid services'), 'icon' => 'icon-shopping-cart', 'url' => $baseUrl . '/paidservices/backend/main/admin', 'active' => isActive('paidservices'), 'visible' => issetModule('payment')),
 							array('label' => tc('Manage payments') . $bagePayments, 'icon' => 'icon-shopping-cart', 'url' => $baseUrl . '/payment/backend/main/admin', 'active' => isActive('payment'), 'visible' => issetModule('payment')),
 							array('label' => tc('Payment systems'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/payment/backend/paysystem/admin', 'active' => isActive('payment.paysystem'), 'visible' => issetModule('payment')),
@@ -185,6 +218,7 @@
 
 							array('label' => tc('Settings')),
 							array('label' => tc('Settings'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/configuration/backend/main/admin', 'active' => isActive('configuration')),
+							array('label' => tc('Manage modules'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/modules/backend/main/admin', 'active' => isActive('modules')),
 							array('label' => tc('Images'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/images/backend/main/index', 'active' => isActive('images')),
 							array('label' => tc('Change admin password'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/adminpass/backend/main/index', 'active' => isActive('adminpass')),
 							array('label' => tc('Seo settings'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/seo/backend/main/admin', 'active' => isActive('seo'), 'visible' => issetModule('seo')),
@@ -196,11 +230,13 @@
 							array('label' => tc('Translations'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/translateMessage/backend/main/admin', 'active' => isActive('translateMessage')),
 							array('label' => tc('Currencies'), 'icon' => 'icon-wrench', 'url' => $baseUrl . '/currency/backend/main/admin', 'active' => isActive('currency')),
 
-							array('label' => tc('Modules'), 'visible' => (issetModule('slider')) || issetModule('advertising') || issetModule('iecsv') || issetModule('formdesigner')),
+							array('label' => tc('Modules'), 'visible' => (issetModule('slider')) || issetModule('advertising') || issetModule('iecsv') || issetModule('formdesigner') || issetModule('socialposting')),
+							array('label' => tc('Mail editor'), 'icon' => 'icon-circle-arrow-right', 'url' => $baseUrl . '/notifier/backend/main/admin', 'active' => isActive('notifier'), 'visible' => issetModule('notifier')),
 							array('label' => tc('Slide-show on the Home page'), 'icon' => 'icon-circle-arrow-right', 'url' => $baseUrl . '/slider/backend/main/admin', 'active' => isActive('slider'), 'visible' => issetModule('slider')),
 							array('label' => tc('Import / Export'), 'icon' => 'icon-circle-arrow-right', 'url' => $baseUrl . '/iecsv/backend/main/admin', 'active' => isActive('iecsv')),
 							array('label' => tc('Advertising banners'), 'icon' => 'icon-circle-arrow-right', 'url' => $baseUrl . '/advertising/backend/advert/admin', 'active' => isActive('advertising'), 'visible' => issetModule('advertising')),
 							array('label' => tc('The forms designer'), 'icon' => 'icon-circle-arrow-right', 'url' => $baseUrl . '/formdesigner/backend/main/admin', 'active' => isActive('formdesigner'), 'visible' => issetModule('formdesigner')),
+							array('label' => tt('Services of automatic posting', 'socialposting'), 'icon' => 'icon-circle-arrow-right', 'url' => $baseUrl . '/socialposting/backend/main/admin', 'active' => isActive('socialposting'), 'visible' => issetModule('socialposting')),
 
 							array('label' => tc('Location module'), 'visible' => (issetModule('location') && param('useLocation', 1))),
 							array('label' => tc('Countries'), 'icon' => 'icon-globe', 'url' => $baseUrl . '/location/backend/country/admin', 'visible' => (issetModule('location') && param('useLocation', 1)), 'active' => isActive('location.country')),
@@ -228,7 +264,7 @@
     <hr>
 
     <footer>
-        <p>&copy;&nbsp;<?php echo param('version_name') . ' ' . param('version') . ', ' . date('Y'); ?></p>
+        <p>&copy;&nbsp;<?php echo ORE_VERSION_NAME . ' ' . ORE_VERSION . ', ' . date('Y'); ?></p>
     </footer>
 
     <div id="loading" style="display:none;"><?php echo Yii::t('common', 'Loading content...'); ?></div>

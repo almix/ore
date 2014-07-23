@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -107,16 +107,27 @@ class ApartmentObjType extends ParentModel {
     }
 
     public function afterSave() {
-        if(issetModule('formdesigner') && $this->isNewRecord){
-            Yii::import('application.modules.formdesigner.models.*');
-            $forms = FormDesigner::model()->findAll();
-            foreach($forms as $form){
-                $formType = new FormDesignerObjType();
-                $formType->formdesigner_id = $form->id;
-                $formType->obj_type_id = $this->id;
-                $formType->save();
+        if($this->isNewRecord){
+            if(issetModule('formdesigner')){
+                Yii::import('application.modules.formdesigner.models.*');
+                $forms = FormDesigner::model()->findAll();
+                foreach($forms as $form){
+                    $formType = new FormDesignerObjType();
+                    $formType->formdesigner_id = $form->id;
+                    $formType->obj_type_id = $this->id;
+                    $formType->save();
+                }
+            }
+
+            $searchFields = SearchFormModel::model()->sort()->findAllByAttributes(array('obj_type_id' => SearchFormModel::OBJ_TYPE_ID_DEFAULT));
+            foreach($searchFields as $field){
+                $newSearch = new SearchFormModel();
+                $newSearch->attributes = $field->attributes;
+                $newSearch->obj_type_id = $this->id;
+                $newSearch->save();
             }
         }
+
         return parent::afterSave();
     }
 
@@ -144,6 +155,9 @@ class ApartmentObjType extends ParentModel {
             $sql = "DELETE FROM {{formdesigner_obj_type}} WHERE obj_type_id=".$this->id;
             $db->createCommand($sql)->execute();
         }
+
+        $sql = "DELETE FROM {{search_form}} WHERE obj_type_id=".$this->id;
+        $db->createCommand($sql)->execute();
 
         return parent::beforeDelete();
     }

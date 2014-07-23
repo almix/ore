@@ -2,8 +2,8 @@
 	/**********************************************************************************************
 	 *                            CMS Open Real Estate
 	 *                              -----------------
-	 *	version				:	1.5.1
-	 *	copyright			:	(c) 2013 Monoray
+	 *	version				:	1.8.2
+	 *	copyright			:	(c) 2014 Monoray
 	 *	website				:	http://www.monoray.ru/
 	 *	contact us			:	http://www.monoray.ru/contact
 	 *
@@ -35,6 +35,10 @@ class MainController extends ModuleUserController {
 			throw404();
 
 		$model = new $this->modelName;
+
+		$modelApartment = Apartment::model()->findByPk($id);
+		if (!$modelApartment)
+			throw404();
 
 		if(isset($_POST[$this->modelName])){
 			$model->attributes = $_POST[$this->modelName];
@@ -73,10 +77,11 @@ class MainController extends ModuleUserController {
 				'model' => $model,
 				'apId' => $id,
 				'isFancy' => true,
+				'modelApartment' => $modelApartment,
 			), false, true);
 		}
 		else{
-			$this->render('complain_form', array('model' => $model, 'apId' => $id));
+			$this->render('complain_form', array('model' => $model, 'apId' => $id, 'modelApartment' => $modelApartment));
 		}
 	}
 

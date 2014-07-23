@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -37,9 +37,11 @@ class ModuleAdminController extends Controller {
 	}
 
 	public function getViewPath($checkTheme=false){
+		if($checkTheme && ($theme=Yii::app()->getTheme())!==null){
+			return $theme->getViewPath().DIRECTORY_SEPARATOR.'modules'.DIRECTORY_SEPARATOR.$this->getModule($this->id)->getName().DIRECTORY_SEPARATOR.'backend';
+		}
 		return Yii::getPathOfAlias('application.modules.'.$this->getModule($this->id)->getName().'.views.backend');
 	}
-
 
 	public function beforeAction($action){
 		if($action->controller && $action->controller->module && $action){
@@ -214,11 +216,14 @@ class ModuleAdminController extends Controller {
 			if($this->scenario){
 				$model->scenario = $this->scenario;
 			}
+
+			$model = $model->with($with)->findByPk($_GET['id']);
 			if($model===null){
 				throw new CHttpException(404,'The requested page does not exist.');
 			}
-			return $model/*->resetScope()*/->with($with)->findByPk($_GET['id']);
+			return $model;
 		}
+		return null;
 	}
 
 	protected function performAjaxValidation($model){
@@ -431,9 +436,13 @@ class ModuleAdminController extends Controller {
 					$model->$field = $action;
 				}
 				else {
-					$model->$field = ($action == 'activate'?1:0);
+					$model->$field = ($action == 'activate' ? 1 : 0);
 				}
-				$model->update(array($field));
+                $className = get_class($model);
+                if($model->$field == 1 && ($className == 'UserAds' || $className == 'Apartment')){
+                    $_POST['set_period_activity'] = 1;
+                }
+				$model->save(false);
 			}
 		}
 
@@ -444,27 +453,6 @@ class ModuleAdminController extends Controller {
 			echo CHtml::link($availableStatuses[$action]);
 		}
 	}
-
-	/*public function actionActivate(){
-        $field = isset($_GET['field']) ? $_GET['field'] : 'active';
-
-		if(isset($_GET['id']) && isset($_GET['action'])){
-			$action = $_GET['action'];
-			$model = $this->loadModel($_GET['id']);
-			if($this->scenario){
-				$model->scenario = $this->scenario;
-			}else{
-                $model->scenario = 'changeStatus';
-            }
-			if($model){
-				$model->$field = ($action == 'activate'?1:0);
-				$model->update(array($field));
-			}
-		}
-		if(!Yii::app()->request->isAjaxRequest){
-			$this->redirect(isset($_POST['returnUrl']) ? $_POST['returnUrl'] : array('admin'));
-		}
-	}*/
 
     public function actionItemsSelected(){
         $idsSelected = Yii::app()->request->getPost('itemsSelected');

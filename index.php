@@ -4,6 +4,9 @@
 $yii=dirname(__FILE__).'/framework/yii.php';
 $config=dirname(__FILE__).'/protected/config/main-free.php';
 
+define('ORE_VERSION_NAME', 'Open Real Estate FREE');
+define('ORE_VERSION', '1.8.2');
+
 define('ROOT_PATH', dirname(__FILE__));
 
 define('IS_FREE', true);

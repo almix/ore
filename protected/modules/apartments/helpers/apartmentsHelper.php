@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -44,6 +44,8 @@ class apartmentsHelper {
 		$sorterLinks = self::getSorterLinks($sort);
 		$criteria->addCondition('t.owner_id = 1 OR t.owner_active = 1');
 
+		$criteria->addInCondition('type', Apartment::availableApTypesIds());
+
 		if($usePagination){
 			$pages = new CPagination(Apartment::model()->count($criteria));
 			$pages->pageSize = $limit;
@@ -55,6 +57,10 @@ class apartmentsHelper {
 
 		// find count
 		$apCount = Apartment::model()->count($criteria);
+
+        if(issetModule('seo')){
+            $criteria->with = array('seo');
+        }
 
 //		$apartments = Apartment::model()
 //			->cache(param('cachingTime', 1209600), Apartment::getImagesDependency())

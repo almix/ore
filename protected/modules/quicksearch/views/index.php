@@ -1,16 +1,22 @@
 <?php
 $this->pageTitle .= ' - '.Yii::t('common', 'Apartment search');
-$this->breadcrumbs=array(
-	Yii::t('common', 'Apartment search'),
-);
 
 if ($filterName) {
+	$this->breadcrumbs=array(
+		Yii::t('common', 'Apartment search') => array('/quicksearch/main/mainsearch'),
+		tt('all_by_filter', 'apartments') . ' "' . $filterName . '"',
+	);
+
 	$this->widget('application.modules.apartments.components.ApartmentsWidget', array(
 		'criteria' => $criteria,
 		'widgetTitle' => tt('all_by_filter', 'apartments') . ' "' . $filterName . '"',
 	));
 }
 else {
+	$this->breadcrumbs=array(
+		Yii::t('common', 'Apartment search'),
+	);
+
 	$wTitle = null;
 	if(issetModule('rss')){
 		$wTitle = '<a target="_blank" title="'.tt('rss_subscribe', 'rss').'" class="rss-icon" href="'

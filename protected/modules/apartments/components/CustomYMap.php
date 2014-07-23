@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -27,7 +27,7 @@ class CustomYMap {
 	public static function init(){
 		self::$icon['href'] = Yii::app()->request->baseUrl."/images/house.png";
 		self::$icon['size'] = array('x' => 32, 'y' => 37);
-		self::$icon['offset'] = array('x' => -16, 'y' => -16.5);
+		self::$icon['offset'] = array('x' => -16, 'y' => -35);
 
 		if (!isset(self::$_instance)) {
 			$className = __CLASS__;
@@ -48,11 +48,12 @@ class CustomYMap {
 
 		// end of ymaps.ready(function () {
 		$this->scripts[] = '
+			    });
 			});
 		';
 
 		// publish scripts
-		Yii::app()->clientScript->registerScript('yMap', implode('', $this->scripts), CClientScript::POS_END);
+		echo CHtml::script(implode("\n", $this->scripts));
 	}
 
 	public static function getLangForMap(){
@@ -96,7 +97,8 @@ class CustomYMap {
 			var globalYMap;
 			var placemark;
 
-			ymaps.ready(function () {
+			$(function(){
+            ymaps.ready(function () {
 				var placemarksAll = [];
 
 				var map = new ymaps.Map("ymap", {
@@ -289,6 +291,8 @@ class CustomYMap {
 				$this->setZoom(param('module_apartments_ymapsZoomCity', 11));
 				$this->setIconType($model);
 
+				$this->addMarker($centerY, $centerX, $inMarker, 0, $model);
+
 				$inMarker = $this->filterContent($inMarker);
 
 				$this->scripts[] = '
@@ -354,7 +358,7 @@ class CustomYMap {
 			self::$icon['href'] = Yii::app()->getBaseUrl().'/'.$model->objType->iconsMapPath.'/'.$model->objType->icon_file;
 			self::$icon['size'] = array('x' => ApartmentObjType::MAP_ICON_MAX_WIDTH, 'y' => ApartmentObjType::MAP_ICON_MAX_HEIGHT);
 			/*$icon['offset'] = array('x' => -16, 'y' => -2);*/
-			self::$icon['offset'] = array('x' => -16, 'y' => -16.5);
+			self::$icon['offset'] = array('x' => -16, 'y' => -35);
 		}
 	}
 }

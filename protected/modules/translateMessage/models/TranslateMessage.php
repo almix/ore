@@ -2,8 +2,8 @@
 /**********************************************************************************************
 *                            CMS Open Real Estate
 *                              -----------------
-*	version				:	1.5.1
-*	copyright			:	(c) 2013 Monoray
+*	version				:	1.8.2
+*	copyright			:	(c) 2014 Monoray
 *	website				:	http://www.monoray.ru/
 *	contact us			:	http://www.monoray.ru/contact
 *
@@ -84,10 +84,9 @@ class TranslateMessage extends ParentModel {
 		return array(
 			'id' => 'ID',
 			'category' => tt('category'),
-
-			'message' => tt('String constant (defined in code)'),
+			'message' => tt('String constant (defined in code)', 'translateMessage'),
 			'language' => tc('Language'),
-			'translation' => tt('Constant value (translation)'),
+			'translation' => tt('Constant value (translation)', 'translateMessage'),
 			'date_updated' => tc('Last updated on'),
 			'status' => tc('Status'),
 		);
