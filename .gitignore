@@ -7,8 +7,6 @@ protected/runtime/*
 protected/data/*.db
 protected/tests/report/*
 !protected/tests/report/.gitignore
-images/*
-!images/.gitignore
 uploads/*
 !uploads/.gitignore
 FILES/*
